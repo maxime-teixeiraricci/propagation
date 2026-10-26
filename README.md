@@ -9,6 +9,7 @@ Il faut seulement Node 18 ou plus.
 
 - 2, 4, 6 ou 8 joueurs, chacun pour soi. Chaque joueur a une couleur et une forme de point.
 - La grille s'adapte au nombre de joueurs (6 à 10 à deux, jusqu'à 16 à huit).
+- Départs équitables : à 2, 4 et 8 joueurs, les départs sont symétriques (chaque joueur est l'image d'un autre par une rotation ou un miroir de la grille), donc tous ont exactement la même surface autour d'eux. À 6 joueurs, la symétrie parfaite est impossible sur une grille carrée : les placements donnent à chacun la même surface à une case près. La place de chacun et le premier joueur sont tirés au sort à chaque partie.
 - Un joueur qui n'a plus aucune case est éliminé, son tour est sauté.
 - Tant que la partie n'est pas complète, le créateur peut la lancer avec les joueurs déjà présents (« Lancer maintenant »).
 - Si quelqu'un ne joue plus pendant 45 secondes, les autres voient un bouton « L'éliminer » pour débloquer la partie.
