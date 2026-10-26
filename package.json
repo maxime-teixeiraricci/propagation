@@ -1,0 +1,8 @@
+{
+  "name": "propagation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jeu de grille à deux joueurs, parties à distance",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
