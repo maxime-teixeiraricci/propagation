@@ -9,10 +9,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=DM+Mono:wght@400;500&family=Familjen+Grotesk:wght@400;500;600&display=swap">
 <style>
 /* Concept : une feuille quadrillée de points, une colonne centrée, le plateau au premier plan.
-   Bleu contre orange, lisibles par tous les daltoniens. */
+   Chaque joueur a une couleur ET une forme de point, pour rester lisible à 8. */
 :root{
   --bg:#E9EEF2; --dot:#C3CDD6; --surface:#F7F9FA; --cell:#EDF1F4; --line:#C9D3DB;
-  --fg:#14202B; --muted:#586977; --p0:#2757E8; --p1:#D97F00; --danger:#B3322F;
+  --fg:#14202B; --muted:#586977; --danger:#B3322F;
+  --p0:#2757E8; --p1:#D97F00; --p2:#0E9F6E; --p3:#C8379B; --p4:#D64045; --p5:#1596BA; --p6:#7B4FD0; --p7:#4B5865;
   --display:'Bricolage Grotesque',system-ui,sans-serif;
   --body:'Familjen Grotesk',system-ui,sans-serif;
   --mono:'DM Mono',ui-monospace,SFMono-Regular,monospace;
@@ -20,13 +21,15 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0E1318; --dot:#222D37; --surface:#151C23; --cell:#1B252E; --line:#2D3946;
-    --fg:#E6EDF3; --muted:#93A4B3; --p0:#7794FF; --p1:#FFB02E; --danger:#FF8A84;
+    --fg:#E6EDF3; --muted:#93A4B3; --danger:#FF8A84;
+    --p0:#7794FF; --p1:#FFB02E; --p2:#2FD39B; --p3:#FF6FCB; --p4:#FF7A7F; --p5:#4CC9EC; --p6:#A98BFF; --p7:#C9D2DC;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0E1318; --dot:#222D37; --surface:#151C23; --cell:#1B252E; --line:#2D3946;
-  --fg:#E6EDF3; --muted:#93A4B3; --p0:#7794FF; --p1:#FFB02E; --danger:#FF8A84;
+  --fg:#E6EDF3; --muted:#93A4B3; --danger:#FF8A84;
+  --p0:#7794FF; --p1:#FFB02E; --p2:#2FD39B; --p3:#FF6FCB; --p4:#FF7A7F; --p5:#4CC9EC; --p6:#A98BFF; --p7:#C9D2DC;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -40,7 +43,7 @@ body{
   padding-left:max(16px, env(safe-area-inset-left, 0px));
   padding-right:max(16px, env(safe-area-inset-right, 0px));
 }
-.app{max-width:540px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+.app{max-width:560px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
 h1{font:700 clamp(30px,7vw,42px)/1 var(--display); letter-spacing:-.02em; margin:0}
 .tag{margin:6px 0 0; color:var(--muted)}
 h2{font:600 18px/1.2 var(--display); margin:0 0 12px}
@@ -61,7 +64,6 @@ input.code-in{font-family:var(--mono); letter-spacing:.25em; text-transform:uppe
 .btn.ghost{background:transparent; color:var(--fg)}
 .btn:disabled{opacity:.4; cursor:not-allowed}
 :is(.btn,input,select,summary,.cell):focus-visible{outline:3px solid var(--p0); outline-offset:2px}
-.or{color:var(--muted); font-size:14px; text-align:center}
 .note{font-size:14px; color:var(--muted); margin:0}
 .err{color:var(--danger)}
 details{border-top:1px solid var(--line); padding-top:12px}
@@ -69,45 +71,59 @@ summary{cursor:pointer; font-weight:600}
 details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:6px; max-width:65ch}
 
 /* partie */
-.players{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.players{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:8px}
 .pl{
-  --pc:var(--p0); display:flex; align-items:center; gap:10px; min-width:0;
-  background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:10px 12px;
-  transition:border-color .2s, box-shadow .2s;
+  display:flex; align-items:center; gap:10px; min-width:0;
+  background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:8px 10px;
+  transition:border-color .2s, box-shadow .2s, opacity .2s;
 }
-.pl[data-i="1"]{--pc:var(--p1)}
 .pl.active{border-color:var(--pc); box-shadow:0 0 0 3px color-mix(in srgb, var(--pc) 22%, transparent)}
-.pl .sw{width:16px; height:16px; border-radius:50%; background:var(--pc); flex:none}
+.pl.out{opacity:.45}
+.pl.out .nm{text-decoration:line-through}
+.pl.empty{border-style:dashed}
+.pl.empty .sw{opacity:.35}
+.pl .sw{width:16px; height:16px; background:var(--pc); flex:none; border-radius:50%}
 .pl .who{min-width:0; display:flex; flex-direction:column}
 .pl .nm{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.pl .st{font:400 13px var(--mono); color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
+.pl .st{font:400 12px/1.3 var(--mono); color:var(--muted); font-variant-numeric:tabular-nums}
 .status{font:600 clamp(18px,4.6vw,22px)/1.25 var(--display); margin:0; min-height:1.3em; text-wrap:balance}
 .board{
   --n:8; display:grid; grid-template-columns:repeat(var(--n), minmax(0,1fr));
-  gap:clamp(2px,.7vw,4px); padding:clamp(4px,1.2vw,8px); width:100%;
+  gap:clamp(1px,.5vw,4px); padding:clamp(4px,1.2vw,8px); width:100%;
   background:var(--surface); border:3px solid var(--line); border-radius:12px; transition:border-color .25s;
 }
-.board[data-turn="0"]{border-color:var(--p0)}
-.board[data-turn="1"]{border-color:var(--p1)}
+.board[data-turn="0"]{border-color:var(--p0)} .board[data-turn="1"]{border-color:var(--p1)}
+.board[data-turn="2"]{border-color:var(--p2)} .board[data-turn="3"]{border-color:var(--p3)}
+.board[data-turn="4"]{border-color:var(--p4)} .board[data-turn="5"]{border-color:var(--p5)}
+.board[data-turn="6"]{border-color:var(--p6)} .board[data-turn="7"]{border-color:var(--p7)}
 .cell{
   appearance:none; position:relative; aspect-ratio:1; padding:0; margin:0; color:inherit;
-  background:var(--cell); border:1.5px solid var(--line); border-radius:6px; cursor:default;
+  background:var(--cell); border:1.5px solid var(--line); border-radius:5px; cursor:default; min-width:0;
 }
-.cell[data-o="0"]{--pc:var(--p0)}
-.cell[data-o="1"]{--pc:var(--p1)}
-.cell[data-o="0"],.cell[data-o="1"]{
+.cell[data-o="0"]{--pc:var(--p0)} .cell[data-o="1"]{--pc:var(--p1)} .cell[data-o="2"]{--pc:var(--p2)}
+.cell[data-o="3"]{--pc:var(--p3)} .cell[data-o="4"]{--pc:var(--p4)} .cell[data-o="5"]{--pc:var(--p5)}
+.cell[data-o="6"]{--pc:var(--p6)} .cell[data-o="7"]{--pc:var(--p7)}
+.cell:not([data-o=""]){
   background:color-mix(in srgb, var(--pc) 13%, var(--cell));
   border-color:color-mix(in srgb, var(--pc) 35%, var(--line));
 }
 .cell.can{border-color:var(--pc); cursor:pointer}
 .cell.can:hover{background:color-mix(in srgb, var(--pc) 26%, var(--cell))}
 .cell i{
-  position:absolute; left:50%; top:50%; width:26%; height:26%; border-radius:50%;
+  position:absolute; left:50%; top:50%; width:28%; height:28%; border-radius:50%;
   background:var(--pc, transparent); opacity:0; pointer-events:none;
   transform:translate(-50%,-50%) scale(0);
   transition:left .22s, top .22s, opacity .15s, transform .24s cubic-bezier(.3,1.6,.5,1);
 }
 .cell i.on{opacity:1; transform:translate(-50%,-50%) scale(1)}
+/* une forme par joueur : cercle, carré, losange, triangle, hexagone, croix, étoile, pentagone */
+.cell[data-o="1"] i,.sw[data-sh="1"]{border-radius:18%}
+.cell[data-o="2"] i,.sw[data-sh="2"]{border-radius:0; clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.cell[data-o="3"] i,.sw[data-sh="3"]{border-radius:0; clip-path:polygon(50% 4%,100% 92%,0 92%)}
+.cell[data-o="4"] i,.sw[data-sh="4"]{border-radius:0; clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)}
+.cell[data-o="5"] i,.sw[data-sh="5"]{border-radius:0; clip-path:polygon(35% 0,65% 0,65% 35%,100% 35%,100% 65%,65% 65%,65% 100%,35% 100%,35% 65%,0 65%,0 35%,35% 35%)}
+.cell[data-o="6"] i,.sw[data-sh="6"]{border-radius:0; clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.cell[data-o="7"] i,.sw[data-sh="7"]{border-radius:0; clip-path:polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)}
 .cell.hot{box-shadow:inset 0 0 0 2px var(--pc), 0 0 14px color-mix(in srgb, var(--pc) 55%, transparent); z-index:1}
 .cell.hot i.on{animation:throb .3s ease-in-out infinite alternate}
 .cell.got{animation:flash .5s ease-out}
@@ -124,44 +140,44 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
 </style>
 </head>
 <body>
-
 <main class="app">
   <header>
     <h1>Propagation</h1>
-    <p class="tag">À 4 points, une case déborde sur ses voisines.</p>
+    <p class="tag">À 4 points, une case déborde sur ses voisines. Le dernier joueur debout gagne.</p>
   </header>
 
   <section id="lobby" class="stack">
     <div class="card stack">
-      <h2>Jouer à distance</h2>
-      <p class="note" id="net">Connexion au jeu en ligne…</p>
+      <h2>Nouvelle partie</h2>
       <div class="row">
-        <label for="name">Ton nom<input id="name" maxlength="16" placeholder="facultatif" autocomplete="nickname"></label>
-        <label for="size">Grille
-          <select id="size"><option value="6">6 × 6</option><option value="8" selected>8 × 8</option><option value="10">10 × 10</option></select>
+        <label for="np">Joueurs
+          <select id="np"><option value="2" selected>2 joueurs</option><option value="4">4 joueurs</option><option value="6">6 joueurs</option><option value="8">8 joueurs</option></select>
         </label>
+        <label for="size">Grille<select id="size"></select></label>
       </div>
-      <button class="btn" id="create" disabled>Créer une partie</button>
-      <div class="or">ou rejoindre avec un code</div>
+      <p class="note" id="net">Connexion au jeu en ligne…</p>
+      <label for="name">Ton nom (partie en ligne)<input id="name" maxlength="16" placeholder="facultatif" autocomplete="nickname"></label>
+      <div class="row">
+        <button class="btn" id="create" disabled>Créer une partie en ligne</button>
+        <button class="btn ghost" id="local">Jouer sur le même écran</button>
+      </div>
+    </div>
+    <div class="card stack">
+      <h2>Rejoindre une partie</h2>
       <div class="row">
         <input id="code" class="code-in" maxlength="4" placeholder="CODE" aria-label="Code de la partie" autocomplete="off" style="flex:1 1 120px">
         <button class="btn ghost" id="join" disabled>Rejoindre</button>
       </div>
       <p class="note err" id="lobby-err"></p>
     </div>
-    <div class="card stack">
-      <h2>Sur le même écran</h2>
-      <p class="note">Deux joueurs, un seul appareil. Utile pour essayer les règles.</p>
-      <button class="btn ghost" id="local">Jouer à deux ici</button>
-    </div>
     <details>
       <summary>Règles</summary>
       <ol>
-        <li>Chaque joueur commence avec un point sur une case.</li>
+        <li>Chaque joueur commence avec un point sur une case, de 2 à 8 joueurs.</li>
         <li>À ton tour, tu ajoutes un point sur une de tes cases.</li>
         <li>Une case qui atteint 4 points déborde : elle perd 4 points et en envoie un sur chacune de ses 4 voisines, qui passent de ton côté. Le seuil est 4 partout, y compris sur un bord ou dans un coin. Les points qui sortent de la grille sont perdus.</li>
         <li>Les débordements s’enchaînent tant qu’une case atteint 4 points.</li>
-        <li>Tu gagnes quand l’adversaire n’a plus aucune case.</li>
+        <li>Un joueur qui n’a plus aucune case est éliminé et son tour est sauté. Le dernier joueur qui a encore des cases gagne.</li>
       </ol>
     </details>
   </section>
@@ -169,14 +185,18 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
   <section id="game" class="stack" hidden>
     <div class="players" id="players"></div>
     <p class="status" id="status" aria-live="polite"></p>
-    <div class="card share" id="waiting" hidden>
-      <span class="code" id="gcode" aria-label="Code de la partie"></span>
-      <button class="btn ghost" id="copy">Copier le lien</button>
-      <p class="note" style="flex:1 1 220px">Envoie le lien à ton ami : en l’ouvrant, il rejoint la partie. Il peut aussi saisir le code sur la page d’accueil.</p>
+    <div class="card stack" id="waiting" hidden>
+      <div class="share">
+        <span class="code" id="gcode" aria-label="Code de la partie"></span>
+        <button class="btn ghost" id="copy">Copier le lien</button>
+        <button class="btn" id="startnow" hidden>Lancer maintenant</button>
+      </div>
+      <p class="note" id="waitnote"></p>
     </div>
     <div class="board" id="board" data-turn="0"></div>
     <div class="foot">
       <button class="btn" id="rematch" hidden>Revanche</button>
+      <button class="btn ghost" id="kick" hidden></button>
       <button class="btn ghost" id="leave">Quitter la partie</button>
     </div>
   </section>
@@ -185,7 +205,7 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
 </main>
 
 <script>
-/* Connexion au serveur de parties (même interface que le stockage utilisé dans Claude). */
+/* Connexion au serveur de parties. */
 (()=>{
   const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
   let ws=null, ready=false, nextId=1, tries=0, rdy;
@@ -215,6 +235,7 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
     get:async()=>snap(p,(await request({t:'get',p})).d),
     set:async d=>{ await request({t:'set',p,d}); },
     update:async d=>{ await request({t:'upd',p,d}); },
+    join:async(tok,name)=>(await request({t:'join',p,tok,name})).idx,
     onSnapshot:(f,err)=>{
       let s=subs.get(p);
       if(!s){ s={fns:new Set(),has:false,last:null}; subs.set(p,s); raw({t:'sub',p}); }
@@ -226,8 +247,7 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
   connect();
   // Un serveur gratuit qui dormait peut mettre une minute à répondre : on patiente.
   setTimeout(()=>{ if(!ready){ const n=document.querySelector('#net'); if(n) n.textContent='Le serveur se réveille, ça peut prendre une minute…'; } },5000);
-  window.claude={use:async name=>{
-    if(name!=='db') return null;
+  window.propagationNet={connected:async()=>{
     const ok=await Promise.race([first,new Promise(r=>setTimeout(()=>r(false),90000))]);
     return ok?db:null;
   }};
@@ -244,10 +264,22 @@ function neighbors(n,i){
   if(y<n-1) r.push(i+n);
   return r;
 }
-function newBoard(n){
+// Cases de départ : np points répartis sur l'anneau intérieur de la grille (à 2 joueurs : deux coins opposés).
+function startCells(n,np){
+  const m=n-2, L=4*(m-1), out=[];
+  for(let k=0;k<np;k++){
+    const t=Math.round(k*L/np)%L, side=Math.floor(t/(m-1)), q=t%(m-1);
+    let x,y;
+    if(side===0){ x=1+q; y=1; } else if(side===1){ x=m; y=1+q; }
+    else if(side===2){ x=m-q; y=m; } else { x=1; y=m-q; }
+    out.push(y*n+x);
+  }
+  return out;
+}
+function newBoard(n,np){
+  np=np||2;
   const o=new Array(n*n).fill(-1), c=new Array(n*n).fill(0);
-  const a=n+1, b=(n-2)*n+(n-2);
-  o[a]=0; c[a]=1; o[b]=1; c[b]=1;
+  startCells(n,np).forEach((i,k)=>{ o[i]=k; c[i]=1; });
   return {n,o,c};
 }
 // Le joueur p ajoute un point en i. Seuil fixe : 4 points, partout.
@@ -256,7 +288,7 @@ function simulate(board,i,p){
   c[i]+=1; o[i]=p;
   const frames=[{o:o.slice(), c:c.slice(), got:[i]}];
   let winner=-1;
-  for(let w=0; w<2000; w++){
+  for(let w=0; w<3000; w++){
     const hot=[];
     for(let k=0;k<c.length;k++) if(c[k]>=4) hot.push(k);
     if(!hot.length) break;
@@ -271,19 +303,30 @@ function simulate(board,i,p){
   }
   return {frames,o,c,winner};
 }
-function tally(o,c){
-  const t=[{cells:0,points:0},{cells:0,points:0}];
-  for(let k=0;k<c.length;k++) if(c[k]>0 && o[k]>=0){ t[o[k]].cells++; t[o[k]].points+=c[k]; }
+// Joueur suivant qui a encore au moins une case (les éliminés sont sautés).
+function nextTurn(o,c,p,np){
+  for(let k=1;k<=np;k++){
+    const q=(p+k)%np;
+    for(let i=0;i<c.length;i++) if(c[i]>0 && o[i]===q) return q;
+  }
+  return p;
+}
+function tally(o,c,np){
+  const t=[];
+  for(let k=0;k<np;k++) t.push({cells:0,points:0});
+  for(let k=0;k<c.length;k++) if(c[k]>0 && o[k]>=0 && t[o[k]]){ t[o[k]].cells++; t[o[k]].points+=c[k]; }
   return t;
 }
 /*END ENGINE*/
 
 (()=>{
 const $=s=>document.querySelector(s);
-const COLORS=['Bleu','Orange'];
+const NAMES=['Bleu','Orange','Vert','Rose','Rouge','Cyan','Violet','Gris'];
 const POS={1:[[50,50]],2:[[30,30],[70,70]],3:[[50,28],[28,70],[72,70]],4:[[30,30],[70,30],[30,70],[70,70]]};
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const SIZES={2:[6,8,10,8],4:[8,10,12,10],6:[10,12,14,12],8:[12,14,16,14]}; // trois tailles + celle par défaut
 const DELAY=matchMedia('(prefers-reduced-motion: reduce)').matches?140:360;
+const KICK_MS=window.__KICK_MS||45000;
 
 const mem={};
 const ss={
@@ -293,11 +336,11 @@ const ss={
 };
 const lsGet=k=>{ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } };
 const lsSet=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} };
-const rand=len=>{ let s=''; const a=new Uint32Array(len); (crypto||{}).getRandomValues?crypto.getRandomValues(a):a.forEach((_,i)=>a[i]=Math.random()*4e9); for(let i=0;i<len;i++) s+=ALPHABET[a[i]%ALPHABET.length]; return s; };
+const rand=len=>{ let s=''; const a=new Uint32Array(len); if(window.crypto&&crypto.getRandomValues) crypto.getRandomValues(a); else for(let i=0;i<len;i++) a[i]=Math.random()*4e9; for(let i=0;i<len;i++) s+=ALPHABET[a[i]%ALPHABET.length]; return s; };
 
 let tok=ss.get('propagation:tok'); if(!tok){ tok=rand(16); ss.set('propagation:tok',tok); }
 
-let db=null, mode='lobby', code=null, unsub=null, remote=null, me=-1, anim=false, failed=false, n=0;
+let db=null, mode='lobby', code=null, unsub=null, remote=null, me=-1, anim=false, failed=false, n=0, np=2, turnSince=Date.now(), netBlocked=false;
 let view={seq:-1,o:null,c:null,turn:0,winner:-1};
 const boardEl=$('#board');
 
@@ -306,20 +349,23 @@ let toastT;
 function toast(msg){ $('#toast').textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').textContent=''; },6000); }
 function errMsg(e){
   const c=e&&e.code;
-  if(c==='invalid_argument') return "Tu n’as pas l’autorisation d’écrire dans cette page. Le propriétaire doit te donner l’accès Contributeur.";
-  if(c==='quota_exceeded') return "Limite de stockage atteinte, impossible de créer une partie.";
+  if(c==='quota_exceeded') return "Le serveur est plein, réessaie plus tard.";
   return "Connexion impossible, réessaie dans un instant.";
 }
 function lobbyErr(msg){ $('#lobby-err').textContent=msg||''; }
 function show(screen){ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; }
 function setHash(v){ try{ if(v) location.hash=v; else if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){} }
+function fillSizes(){
+  const [a,b,c,def]=SIZES[$('#np').value]||SIZES[2];
+  $('#size').innerHTML=[a,b,c].map(v=>`<option value="${v}"${v===def?' selected':''}>${v} × ${v}</option>`).join('');
+}
 
 /* ---------- plateau ---------- */
 function buildBoard(size){
   n=size;
   boardEl.style.setProperty('--n',n);
   let h='';
-  for(let i=0;i<n*n;i++) h+=`<button class="cell" data-i="${i}" disabled><i></i><i></i><i></i><i></i></button>`;
+  for(let i=0;i<n*n;i++) h+=`<button class="cell" data-i="${i}" data-o="" disabled><i></i><i></i><i></i><i></i></button>`;
   boardEl.innerHTML=h;
 }
 function paint(st,got){
@@ -338,7 +384,7 @@ function paint(st,got){
     if(el.dataset.o!==od) el.dataset.o=od;
     el.classList.toggle('hot',c>=4);
     if(g.has(i)){ el.classList.remove('got'); void el.offsetWidth; el.classList.add('got'); } else el.classList.remove('got');
-    el.setAttribute('aria-label',`Ligne ${Math.floor(i/n)+1}, colonne ${i%n+1}, ${c} point${c>1?'s':''}${c>0?', '+COLORS[o]:''}`);
+    el.setAttribute('aria-label',`Ligne ${Math.floor(i/n)+1}, colonne ${i%n+1}, ${c} point${c>1?'s':''}${c>0?', '+NAMES[o]:''}`);
   }
 }
 function canPlay(i){
@@ -366,48 +412,69 @@ function playFrames(frames,done){
   step();
 }
 function setView(v){
+  if(v.seq!==view.seq||v.turn!==view.turn) turnSince=Date.now();
   view=v; paint(v,[]); renderMeta();
 }
 function resetView(){ view={seq:-1,o:null,c:null,turn:0,winner:-1}; }
 
 /* ---------- affichage de la partie ---------- */
 function getNames(){
-  if(mode==='local') return COLORS.slice();
-  return [0,1].map(i=>(remote.names[i]||'')|| (i===1&&!remote.players[1]?'…':COLORS[i]));
+  if(mode!=='online') return NAMES.slice(0,np);
+  const r=[];
+  for(let i=0;i<np;i++) r.push(remote.players[i]?((remote.names[i]||'')||NAMES[i]):'En attente…');
+  return r;
 }
 function renderMeta(){
   if(!view.o||mode==='lobby') return;
-  const names=getNames(), t=tally(view.o,view.c), over=view.winner>=0;
-  const waiting=mode==='online'&&remote.status==='waiting';
-  $('#players').innerHTML=[0,1].map(i=>{
+  const names=getNames(), t=tally(view.o,view.c,np), over=view.winner>=0;
+  const online=mode==='online';
+  const waiting=online&&remote.status==='waiting';
+  const joined=online?remote.players.filter(Boolean).length:np;
+  let h='';
+  for(let i=0;i<np;i++){
+    const seat=!online||!!remote.players[i];
+    const out=!waiting&&seat&&t[i].cells===0;
     const active=!over&&!waiting&&view.turn===i;
-    const you=mode==='online'&&me===i?' (toi)':'';
-    return `<div class="pl${active?' active':''}" data-i="${i}"><span class="sw"></span><div class="who"><span class="nm"></span><span class="st">${t[i].cells} case${t[i].cells>1?'s':''} · ${t[i].points} pt${t[i].points>1?'s':''}</span></div></div>`;
-  }).join('');
-  [...$('#players').children].forEach((el,i)=>{ el.querySelector('.nm').textContent=names[i]+(mode==='online'&&me===i?' (toi)':''); });
+    const st=!seat?'place libre':out?'éliminé':`${t[i].cells} case${t[i].cells>1?'s':''} · ${t[i].points} pt${t[i].points>1?'s':''}`;
+    h+=`<div class="pl${active?' active':''}${out?' out':''}${seat?'':' empty'}" style="--pc:var(--p${i})"><span class="sw" data-sh="${i}"></span><div class="who"><span class="nm"></span><span class="st">${st}</span></div></div>`;
+  }
+  $('#players').innerHTML=h;
+  [...$('#players').children].forEach((el,i)=>{ el.querySelector('.nm').textContent=names[i]+(online&&me===i?' (toi)':''); });
   let s;
-  if(waiting) s='En attente de ton ami…';
+  const iAmOut=online&&me>=0&&!waiting&&t[me].cells===0;
+  if(waiting) s=`En attente des joueurs (${joined} / ${np})…`;
   else if(over){
-    if(mode==='online'&&me>=0) s=view.winner===me?'Tu as gagné la partie.':`${names[view.winner]} a gagné la partie.`;
+    if(online&&me>=0) s=view.winner===me?'Tu as gagné la partie.':`${names[view.winner]} a gagné la partie.`;
     else s=`${names[view.winner]} gagne la partie.`;
   }
-  else if(mode==='online'&&me<0) s=`Tu regardes la partie. Au tour de ${names[view.turn]}.`;
-  else if(mode==='online'&&view.turn===me) s='À toi de jouer.';
+  else if(online&&me<0) s=`Tu regardes la partie. Au tour de ${names[view.turn]}.`;
+  else if(iAmOut) s=`Tu es éliminé. Au tour de ${names[view.turn]}.`;
+  else if(online&&view.turn===me) s='À toi de jouer.';
   else s=`Au tour de ${names[view.turn]}.`;
   $('#status').textContent=s;
   $('#waiting').hidden=!waiting;
   $('#gcode').textContent=code||'';
-  $('#rematch').hidden=!over||(mode==='online'&&me<0);
+  $('#startnow').hidden=!(waiting&&me===0&&joined>=2);
+  $('#waitnote').textContent=waiting?`Envoie le lien à tes amis : en l’ouvrant, ils prennent une place. La partie démarre quand les ${np} places sont prises. Ils peuvent aussi saisir le code sur la page d’accueil.`:'';
+  $('#rematch').hidden=!over||(online&&me<0);
   boardEl.dataset.turn=over?String(view.winner):String(view.turn);
   refreshCells();
+  updateKick();
 }
+function updateKick(){
+  const b=$('#kick');
+  const show=mode==='online'&&!!remote&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&Date.now()-turnSince>KICK_MS;
+  b.hidden=!show;
+  if(show) b.textContent=`${getNames()[view.turn]} ne répond plus ? L’éliminer`;
+}
+setInterval(updateKick,1000);
 
 /* ---------- jouer un coup ---------- */
 async function play(i){
   if(!canPlay(i)) return;
   const p=mode==='local'?view.turn:me;
   const r=simulate({n,o:view.o,c:view.c},i,p);
-  const nv={o:r.o,c:r.c,turn:r.winner>=0?p:1-p,winner:r.winner,seq:view.seq+1};
+  const nv={o:r.o,c:r.c,turn:r.winner>=0?p:nextTurn(r.o,r.c,p,np),winner:r.winner,seq:view.seq+1};
   failed=false;
   playFrames(r.frames,()=>{
     if(failed){ failed=false; resetView(); applyRemote(); return; }
@@ -431,6 +498,7 @@ boardEl.addEventListener('click',e=>{
 /* ---------- en ligne ---------- */
 function applyRemote(){
   const d=remote; if(!d) return;
+  np=d.np;
   if(!boardEl.children.length||n!==d.n){ buildBoard(d.n); resetView(); }
   if(d.seq>view.seq){
     const nv={o:d.o,c:d.c,turn:d.turn,winner:d.winner,seq:d.seq};
@@ -441,7 +509,7 @@ function applyRemote(){
   } else renderMeta();
 }
 function onRemote(d){
-  remote=d; me=d.players.indexOf(tok);
+  remote=d; me=d.players.indexOf(tok); np=d.np;
   if(anim) renderMeta(); else applyRemote();
 }
 function enterGame(c){
@@ -450,7 +518,7 @@ function enterGame(c){
   boardEl.innerHTML=''; n=0;
   show('game');
   $('#status').textContent='Chargement de la partie…';
-  $('#players').innerHTML=''; $('#waiting').hidden=true; $('#rematch').hidden=true;
+  $('#players').innerHTML=''; $('#waiting').hidden=true; $('#rematch').hidden=true; $('#kick').hidden=true;
   unsub=db.doc('games/'+c).onSnapshot(snap=>{
     if(!snap.exists){ toast('Cette partie n’existe plus.'); leave(); return; }
     onRemote(snap.data());
@@ -459,13 +527,15 @@ function enterGame(c){
 async function createGame(){
   lobbyErr(''); busy(true);
   try{
-    const size=+$('#size').value||8, nm=$('#name').value.trim();
+    const size=+$('#size').value||8, k=+$('#np').value||2, nm=$('#name').value.trim();
     lsSet('propagation:name',nm);
     let c=null;
     for(let t=0;t<6&&!c;t++){ const cand=rand(4); if(!(await db.doc('games/'+cand).get()).exists) c=cand; }
     if(!c) throw {code:'unavailable'};
-    const b=newBoard(size);
-    await db.doc('games/'+c).set({code:c,n:size,status:'waiting',players:[tok,null],names:[nm,''],o:b.o,c:b.c,turn:0,seq:0,last:null,winner:-1,created:Date.now()});
+    const b=newBoard(size,k);
+    const players=new Array(k).fill(null), names=new Array(k).fill('');
+    players[0]=tok; names[0]=nm;
+    await db.doc('games/'+c).set({code:c,n:size,np:k,status:'waiting',players,names,o:b.o,c:b.c,turn:0,seq:0,last:null,winner:-1,created:Date.now()});
     enterGame(c);
   }catch(e){ lobbyErr(errMsg(e)); }
   busy(false);
@@ -474,22 +544,38 @@ async function joinGame(c,silent){
   if(!silent) lobbyErr('');
   busy(true);
   try{
-    const ref=db.doc('games/'+c), s=await ref.get();
-    if(!s.exists){ if(!silent) lobbyErr('Code introuvable. Vérifie les 4 caractères.'); busy(false); return; }
-    const d=s.data(), nm=$('#name').value.trim();
-    if(!d.players.includes(tok)&&d.players[1]===null){
-      lsSet('propagation:name',nm);
-      await ref.update({players:[d.players[0],tok],names:[d.names[0],nm],status:'playing'});
-    }
+    lsSet('propagation:name',$('#name').value.trim());
+    await db.doc('games/'+c).join(tok,$('#name').value.trim());
     enterGame(c);
-  }catch(e){ if(!silent) lobbyErr(errMsg(e)); }
+  }catch(e){
+    if(!silent) lobbyErr(e&&e.code==='not_found'?'Code introuvable. Vérifie les 4 caractères.':errMsg(e));
+  }
   busy(false);
+}
+async function startNow(){
+  try{
+    const players=remote.players.filter(Boolean);
+    if(players.length<2) return;
+    const names=players.map(tk=>remote.names[remote.players.indexOf(tk)]);
+    const b=newBoard(remote.n,players.length);
+    await db.doc('games/'+code).update({np:players.length,players,names,o:b.o,c:b.c,turn:0,seq:remote.seq+1,last:null,winner:-1,status:'playing'});
+  }catch(e){ toast(errMsg(e)); }
+}
+async function kick(){
+  try{
+    const idx=view.turn, o=view.o.slice(), c=view.c.slice();
+    for(let k=0;k<c.length;k++) if(o[k]===idx){ o[k]=-1; c[k]=0; }
+    const owners=new Set(); for(let k=0;k<c.length;k++) if(c[k]>0) owners.add(o[k]);
+    const winner=owners.size===1?[...owners][0]:-1;
+    const turn=winner>=0?winner:nextTurn(o,c,idx,np);
+    await db.doc('games/'+code).update({o,c,turn,seq:remote.seq+1,last:null,winner,status:winner>=0?'done':'playing'});
+  }catch(e){ toast(errMsg(e)); }
 }
 async function rematch(){
   if(mode==='local'){ startLocal(); return; }
   try{
-    const b=newBoard(remote.n);
-    await db.doc('games/'+code).update({o:b.o,c:b.c,turn:view.winner===0?1:0,seq:remote.seq+1,last:null,winner:-1,status:'playing'});
+    const b=newBoard(remote.n,remote.np);
+    await db.doc('games/'+code).update({o:b.o,c:b.c,turn:(view.winner+1)%remote.np,seq:remote.seq+1,last:null,winner:-1,status:'playing'});
   }catch(e){ toast(errMsg(e)); }
 }
 
@@ -497,9 +583,11 @@ async function rematch(){
 function startLocal(){
   if(unsub){ unsub(); unsub=null; }
   mode='local'; remote=null; code=null; me=-1; anim=false;
-  const b=newBoard(+$('#size').value||8);
+  np=+$('#np').value||2;
+  const b=newBoard(+$('#size').value||8,np);
   buildBoard(b.n);
   show('game');
+  resetView();
   setView({o:b.o,c:b.c,turn:0,winner:-1,seq:0});
 }
 
@@ -515,8 +603,9 @@ function busy(b){
   const off=b||!db||netBlocked;
   $('#create').disabled=off; $('#join').disabled=off;
 }
-let netBlocked=false;
 $('#name').value=lsGet('propagation:name');
+fillSizes();
+$('#np').addEventListener('change',fillSizes);
 $('#create').addEventListener('click',createGame);
 $('#join').addEventListener('click',()=>{
   const c=$('#code').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
@@ -527,6 +616,8 @@ $('#code').addEventListener('input',e=>{ e.target.value=e.target.value.toUpperCa
 $('#code').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#join').click(); });
 $('#local').addEventListener('click',startLocal);
 $('#rematch').addEventListener('click',rematch);
+$('#startnow').addEventListener('click',startNow);
+$('#kick').addEventListener('click',kick);
 $('#leave').addEventListener('click',leave);
 $('#copy').addEventListener('click',async()=>{
   const el=$('#gcode');
@@ -534,7 +625,7 @@ $('#copy').addEventListener('click',async()=>{
   catch(e){
     const r=document.createRange(); r.selectNodeContents(el);
     const s=getSelection(); s.removeAllRanges(); s.addRange(r);
-    $('#toast').style.color='var(--muted)'; toast('Code sélectionné. Copie-le avec Ctrl+C et envoie-le à ton ami.');
+    $('#toast').style.color='var(--muted)'; toast('Code sélectionné. Copie-le avec Ctrl+C et envoie-le à tes amis.');
     setTimeout(()=>{ $('#toast').style.color=''; },6500);
   }
 });
@@ -543,18 +634,11 @@ $('#copy').addEventListener('click',async()=>{
   const hashCode=(location.hash||'').slice(1).toUpperCase();
   const wanted=/^[A-Z0-9]{4}$/.test(hashCode)?hashCode:ss.get('propagation:game');
   if(wanted) $('#code').value=wanted;
-  try{
-    db=window.claude&&claude.use?await claude.use('db'):null;
-    const user=window.claude&&claude.use?await claude.use('user'):null;
-    if(db&&user&&(await user.can('data.write'))===false){
-      netBlocked=true;
-      $('#net').textContent='Ton accès à cette page est en lecture seule. Tu peux jouer sur le même écran, mais pas à distance.';
-    }
-  }catch(e){ db=null; }
+  try{ db=window.propagationNet?await propagationNet.connected():null; }catch(e){ db=null; }
   if(!db) $('#net').textContent='Impossible de joindre le serveur de jeu. Recharge la page. Le mode « même écran » fonctionne.';
-  else if(!netBlocked) $('#net').textContent='Crée une partie et envoie le code à ton ami.';
+  else $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.';
   busy(false);
-  if(db&&!netBlocked&&wanted) joinGame(wanted,true);
+  if(db&&wanted) joinGame(wanted,true);
 })();
 })();
 </script>

@@ -126,6 +126,26 @@ function handle(c, msg) {
     docs.set(p, { d: Object.assign({}, cur.d, m.d), t: Date.now() });
     reply(true); broadcast(p);
   }
+  else if (t === 'join') {
+    // Prend la première place libre, de façon atomique (plusieurs joueurs peuvent arriver en même temps).
+    const cur = docs.get(p);
+    const tok = typeof m.tok === 'string' ? m.tok.slice(0, 40) : '';
+    const name = typeof m.name === 'string' ? m.name.slice(0, 16) : '';
+    if (!cur || !Array.isArray(cur.d.players) || !Array.isArray(cur.d.names)) { reply(false, { code: 'not_found' }); return; }
+    if (!tok) { reply(false, { code: 'invalid_argument' }); return; }
+    const d = cur.d;
+    let idx = d.players.indexOf(tok);
+    if (idx < 0 && d.status === 'waiting') {
+      idx = d.players.indexOf(null);
+      if (idx >= 0) {
+        const players = d.players.slice(), names = d.names.slice();
+        players[idx] = tok; names[idx] = name;
+        docs.set(p, { d: Object.assign({}, d, { players, names, status: players.includes(null) ? 'waiting' : 'playing' }), t: Date.now() });
+        broadcast(p);
+      }
+    }
+    reply(true, { idx }); // -1 : partie complète, tu regardes
+  }
   else reply(false, { code: 'invalid_argument' });
 }
 
