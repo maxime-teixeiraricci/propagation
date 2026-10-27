@@ -54,6 +54,8 @@ node server.js
 
 Ouvre http://localhost:3000. « Jouer sur le même écran » permet de tester seul.
 
+En local, les comptes, l'Élo et les parties sont gardés dans le dossier `data/` (fichier `data.json`) : tu peux arrêter et relancer le serveur sans rien perdre. Pour repartir de zéro, supprime ce dossier.
+
 ## Mettre en ligne gratuitement (Render)
 
 1. Dépôt GitHub avec ces fichiers à la racine.
@@ -64,7 +66,7 @@ Ouvre http://localhost:3000. « Jouer sur le même écran » permet de tester se
 
 ## Garder les parties (indispensable pour les parties de plusieurs jours)
 
-Le disque de l'offre gratuite de Render est effacé à chaque redémarrage ou mise en veille. Sans stockage externe, les parties longues sont perdues. La solution gratuite : une base Upstash Redis.
+Le disque de l'offre gratuite de Render est effacé à chaque redémarrage ou mise en veille. Sans stockage externe, **les comptes, l'Élo et les parties sont perdus** (la page affiche alors un avertissement dans « Mon compte »). La solution gratuite : une base Upstash Redis.
 
 1. Crée un compte gratuit sur upstash.com, puis « Create Database » (Redis, région proche, plan Free).
 2. Dans la page de la base, section **REST API**, copie `UPSTASH_REDIS_REST_URL` et `UPSTASH_REDIS_REST_TOKEN`.

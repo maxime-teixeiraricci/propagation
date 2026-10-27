@@ -6,7 +6,8 @@
 // Stockage (au choix, par variables d'environnement) :
 //   UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN : base gratuite chez Upstash (recommandé en ligne)
 //   DATA_DIR                                          : un dossier où écrire data.json (PC, ou disque persistant)
-//   rien                                              : tout est en mémoire, perdu au redémarrage
+//   rien                                              : en local, les données vont dans le dossier ./data (conservées d'un redémarrage à l'autre) ;
+//                                                       sur Render (disque effacé) ou en test, tout reste en mémoire
 'use strict';
 const http = require('http');
 const https = require('https');
@@ -20,7 +21,8 @@ const PORT = process.env.PORT || 3000;
 const TEST = process.env.PROPAGATION_TEST === '1';          // autorise des délais très courts (tests)
 const UP_URL = (process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/+$/, '');
 const UP_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || '';
-const DATA_DIR = process.env.DATA_DIR || '';
+// En local, on garde les comptes et l'Élo dans ./data par défaut. Sur Render le disque gratuit est effacé : on ne fait pas semblant.
+const DATA_DIR = process.env.DATA_DIR || (TEST || process.env.RENDER || (UP_URL && UP_TOKEN) ? '' : path.join(__dirname, 'data'));
 const STORAGE = UP_URL && UP_TOKEN ? 'upstash' : DATA_DIR ? 'file' : 'memory';
 
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
