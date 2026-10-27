@@ -49,9 +49,11 @@ h1{font:700 clamp(30px,7vw,42px)/1 var(--display); letter-spacing:-.02em; margin
 h2{font:600 18px/1.2 var(--display); margin:0 0 12px}
 .card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:18px}
 .stack{display:flex; flex-direction:column; gap:12px}
-.row{display:flex; gap:10px; flex-wrap:wrap}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
 .row > *{min-width:0}
 label{display:flex; flex-direction:column; gap:5px; font-size:14px; color:var(--muted); flex:1 1 140px}
+label.check{flex-direction:row; align-items:center; gap:10px; color:var(--fg); font-size:15px; flex:1 1 100%}
+label.check input{width:auto}
 input,select{
   font:500 16px var(--body); color:var(--fg); background:var(--cell);
   border:1.5px solid var(--line); border-radius:8px; padding:10px 12px; width:100%; min-width:0;
@@ -62,13 +64,40 @@ input.code-in{font-family:var(--mono); letter-spacing:.25em; text-transform:uppe
   border:1.5px solid var(--fg); background:var(--fg); color:var(--bg);
 }
 .btn.ghost{background:transparent; color:var(--fg)}
+.btn.small{padding:7px 12px; font-size:14px}
 .btn:disabled{opacity:.4; cursor:not-allowed}
-:is(.btn,input,select,summary,.cell):focus-visible{outline:3px solid var(--p0); outline-offset:2px}
+:is(.btn,input,select,summary,.cell,.gitem):focus-visible{outline:3px solid var(--p0); outline-offset:2px}
 .note{font-size:14px; color:var(--muted); margin:0}
 .err{color:var(--danger)}
 details{border-top:1px solid var(--line); padding-top:12px}
 summary{cursor:pointer; font-weight:600}
-details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:6px; max-width:65ch}
+details > :not(summary){margin-top:10px}
+details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-width:65ch}
+
+/* compte */
+.me{display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap}
+.me label{flex:1 1 180px}
+.elo{font:700 30px/1 var(--display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.elo small{display:block; font:500 12px var(--body); letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:3px}
+.rcode{font:500 15px/1.5 var(--mono); letter-spacing:.06em; word-break:break-all; user-select:all; background:var(--cell); border:1.5px dashed var(--line); border-radius:8px; padding:10px 12px}
+
+/* mes parties */
+.games{display:flex; flex-direction:column; gap:8px}
+.gitem{
+  display:flex; align-items:center; gap:12px; text-align:left; width:100%; font:inherit; color:inherit; cursor:pointer;
+  background:var(--cell); border:1.5px solid var(--line); border-radius:9px; padding:10px 12px;
+}
+.gitem:hover{border-color:var(--fg)}
+.gitem.mine{border-color:var(--pc); box-shadow:0 0 0 3px color-mix(in srgb, var(--pc) 22%, transparent)}
+.gitem .sw{width:18px; height:18px; background:var(--pc); flex:none; border-radius:50%}
+.gi{display:flex; flex-direction:column; min-width:0}
+.g1{font-weight:600}
+.g2{font-size:14px; color:var(--muted)}
+.gitem.mine .g2{color:var(--fg); font-weight:600}
+.top{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px; font-variant-numeric:tabular-nums}
+.top li{display:flex; gap:10px; padding:6px 8px; border-radius:6px}
+.top li.me{background:var(--cell); font-weight:600}
+.top .r{width:2ch; color:var(--muted)} .top .n{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap} .top .e{font-family:var(--mono)}
 
 /* partie */
 .players{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:8px}
@@ -83,10 +112,14 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
 .pl.empty{border-style:dashed}
 .pl.empty .sw{opacity:.35}
 .pl .sw{width:16px; height:16px; background:var(--pc); flex:none; border-radius:50%}
-.pl .who{min-width:0; display:flex; flex-direction:column}
+.pl .who{min-width:0; display:flex; flex-direction:column; flex:1}
+.pl .top1{display:flex; gap:6px; align-items:baseline; min-width:0}
 .pl .nm{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pl .rt{font:400 12px var(--mono); color:var(--muted); flex:none}
 .pl .st{font:400 12px/1.3 var(--mono); color:var(--muted); font-variant-numeric:tabular-nums}
 .status{font:600 clamp(18px,4.6vw,22px)/1.25 var(--display); margin:0; min-height:1.3em; text-wrap:balance}
+.timer{margin:-8px 0 0; font:500 15px var(--mono); color:var(--muted); font-variant-numeric:tabular-nums}
+.timer.urgent{color:var(--danger); font-weight:600}
 .board{
   --n:8; display:grid; grid-template-columns:repeat(var(--n), minmax(0,1fr));
   gap:clamp(1px,.5vw,4px); padding:clamp(4px,1.2vw,8px); width:100%;
@@ -148,6 +181,34 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
 
   <section id="lobby" class="stack">
     <div class="card stack">
+      <h2>Mon compte</h2>
+      <div class="me">
+        <label for="name">Mon nom<input id="name" maxlength="16" placeholder="Joueur" autocomplete="nickname"></label>
+        <div class="elo" aria-live="polite"><small>Élo</small><span id="elo">…</span></div>
+      </div>
+      <p class="note" id="pstats"></p>
+      <details>
+        <summary>Retrouver mon compte sur un autre appareil</summary>
+        <p class="note">Ce code te redonne ton nom, ton Élo et toutes tes parties, avec ton côté. Garde-le, et ne le partage pas : il donne accès à ton compte.</p>
+        <div class="rcode" id="rcode"></div>
+        <div class="row">
+          <button class="btn ghost small" id="rcopy">Copier mon code</button>
+        </div>
+        <p class="note">Sur l’autre appareil, colle le code ici :</p>
+        <div class="row">
+          <input id="rin" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" aria-label="Code de récupération" style="flex:1 1 220px">
+          <button class="btn ghost small" id="ruse">Utiliser ce code</button>
+        </div>
+        <p class="note err" id="rerr"></p>
+      </details>
+    </div>
+
+    <div class="card stack">
+      <h2>Mes parties</h2>
+      <div class="games" id="games"><p class="note">Connexion…</p></div>
+    </div>
+
+    <div class="card stack">
       <h2>Nouvelle partie</h2>
       <div class="row">
         <label for="np">Joueurs
@@ -155,13 +216,24 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
         </label>
         <label for="size">Grille<select id="size"></select></label>
       </div>
+      <div class="row">
+        <label for="mode">Rythme
+          <select id="mode"><option value="live" selected>Rapide : tout le monde est là</option><option value="long">Longue durée : plusieurs jours</option></select>
+        </label>
+        <label for="hours" id="hoursbox" hidden>Temps par coup
+          <select id="hours"><option value="12">12 heures</option><option value="24" selected>24 heures</option><option value="48">48 heures</option><option value="72">72 heures</option></select>
+        </label>
+      </div>
+      <p class="note" id="modenote"></p>
+      <label class="check" for="ranked"><input type="checkbox" id="ranked" checked> Partie classée (compte pour l’Élo)</label>
       <p class="note" id="net">Connexion au jeu en ligne…</p>
-      <label for="name">Ton nom (partie en ligne)<input id="name" maxlength="16" placeholder="facultatif" autocomplete="nickname"></label>
       <div class="row">
         <button class="btn" id="create" disabled>Créer une partie en ligne</button>
         <button class="btn ghost" id="local">Jouer sur le même écran</button>
       </div>
+      <p class="note err" id="create-err"></p>
     </div>
+
     <div class="card stack">
       <h2>Rejoindre une partie</h2>
       <div class="row">
@@ -170,6 +242,12 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
       </div>
       <p class="note err" id="lobby-err"></p>
     </div>
+
+    <details id="topbox">
+      <summary>Classement</summary>
+      <ol class="top" id="top"></ol>
+      <p class="note" id="topnote"></p>
+    </details>
     <details>
       <summary>Règles</summary>
       <ol>
@@ -178,6 +256,8 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
         <li>Une case qui atteint 4 points déborde : elle perd 4 points et en envoie un sur chacune de ses 4 voisines, qui passent de ton côté. Le seuil est 4 partout, y compris sur un bord ou dans un coin. Les points qui sortent de la grille sont perdus.</li>
         <li>Les débordements s’enchaînent tant qu’une case atteint 4 points.</li>
         <li>Un joueur qui n’a plus aucune case est éliminé et son tour est sauté. Le dernier joueur qui a encore des cases gagne.</li>
+        <li>En partie longue durée, chaque joueur a un temps limité pour jouer son coup (de 12 h à 72 h). S’il le dépasse, il est éliminé. Tu peux fermer la page : tes parties et ton côté sont gardés sur ton compte.</li>
+        <li>Élo : tout le monde commence à 1000. À l’issue d’une partie classée, chaque joueur est comparé à chacun des autres selon son rang final, comme dans des duels. Battre un joueur mieux classé rapporte plus.</li>
       </ol>
     </details>
   </section>
@@ -185,6 +265,7 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
   <section id="game" class="stack" hidden>
     <div class="players" id="players"></div>
     <p class="status" id="status" aria-live="polite"></p>
+    <p class="timer" id="timer" hidden></p>
     <div class="card stack" id="waiting" hidden>
       <div class="share">
         <span class="code" id="gcode" aria-label="Code de la partie"></span>
@@ -197,184 +278,118 @@ details ol{margin:10px 0 0; padding-left:20px; display:flex; flex-direction:colu
     <div class="foot">
       <button class="btn" id="rematch" hidden>Revanche</button>
       <button class="btn ghost" id="kick" hidden></button>
-      <button class="btn ghost" id="leave">Quitter la partie</button>
+      <button class="btn ghost" id="resign" hidden>Abandonner</button>
+      <button class="btn ghost" id="leave">Retour à mes parties</button>
     </div>
   </section>
 
   <p class="toast" id="toast" role="status" aria-live="polite"></p>
 </main>
 
+<script src="engine.js"></script>
 <script>
-/* Connexion au serveur de parties. */
 (()=>{
-  const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
-  let ws=null, ready=false, nextId=1, tries=0, rdy;
-  const first=new Promise(r=>{rdy=r;});
-  const pend=new Map(), subs=new Map();
-  const snap=(p,d)=>({id:p.split('/').pop(),exists:d!=null,data:()=>d==null?undefined:d,metadata:{fromCache:false,hasPendingWrites:false}});
-  const raw=o=>{ if(ws&&ready) ws.send(JSON.stringify(o)); };
-  function connect(){
-    try{ ws=new WebSocket(url); }catch(e){ retry(); return; }
-    ws.onopen=()=>{ ready=true; tries=0; rdy(true); for(const p of subs.keys()) raw({t:'sub',p}); };
-    ws.onmessage=ev=>{
-      let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
-      if(m.t==='doc'){ const s=subs.get(m.p); if(s){ s.has=true; s.last=m.d; [...s.fns].forEach(f=>f(snap(m.p,m.d))); } }
-      else if(m.t==='res'){ const q=pend.get(m.id); if(q){ pend.delete(m.id); if(m.ok) q.res(m); else q.rej({code:m.code||'unavailable'}); } }
-    };
-    ws.onclose=()=>{ ready=false; for(const q of pend.values()) q.rej({code:'unavailable'}); pend.clear(); retry(); };
-    ws.onerror=()=>{};
-  }
-  function retry(){ tries++; setTimeout(connect,Math.min(5000,400*tries)); }
-  function request(o){
-    return new Promise((res,rej)=>{
-      if(!ready){ rej({code:'unavailable'}); return; }
-      const id=nextId++; pend.set(id,{res,rej}); raw(Object.assign({id},o));
-    });
-  }
-  const db={doc:p=>({
-    get:async()=>snap(p,(await request({t:'get',p})).d),
-    set:async d=>{ await request({t:'set',p,d}); },
-    update:async d=>{ await request({t:'upd',p,d}); },
-    join:async(tok,name)=>(await request({t:'join',p,tok,name})).idx,
-    onSnapshot:(f,err)=>{
-      let s=subs.get(p);
-      if(!s){ s={fns:new Set(),has:false,last:null}; subs.set(p,s); raw({t:'sub',p}); }
-      s.fns.add(f);
-      if(s.has) setTimeout(()=>f(snap(p,s.last)),0);
-      return ()=>{ const e=subs.get(p); if(!e) return; e.fns.delete(f); if(!e.fns.size){ subs.delete(p); raw({t:'unsub',p}); } };
-    }
-  })};
-  connect();
-  // Un serveur gratuit qui dormait peut mettre une minute à répondre : on patiente.
-  setTimeout(()=>{ if(!ready){ const n=document.querySelector('#net'); if(n) n.textContent='Le serveur se réveille, ça peut prendre une minute…'; } },5000);
-  window.propagationNet={connected:async()=>{
-    const ok=await Promise.race([first,new Promise(r=>setTimeout(()=>r(false),90000))]);
-    return ok?db:null;
-  }};
-})();
-</script>
-
-<script>
-/*ENGINE*/
-function neighbors(n,i){
-  const x=i%n, y=(i-x)/n, r=[];
-  if(x>0) r.push(i-1);
-  if(x<n-1) r.push(i+1);
-  if(y>0) r.push(i-n);
-  if(y<n-1) r.push(i+n);
-  return r;
-}
-// Cases de départ, dans l'ordre où elles se suivent autour de la grille (sens des aiguilles d'une montre).
-// 2 joueurs : deux coins opposés. 4 joueurs : les quatre coins. Ces deux cas sont parfaitement symétriques.
-// 8 joueurs : une orbite complète du carré (rotations + miroirs), donc toutes les surfaces sont identiques.
-// 6 joueurs : aucune symétrie parfaite n'existe sur une grille carrée ; ces placements donnent à chacun
-// la même surface (à une case près), la même distance au plus proche adversaire, et le même recul au bord.
-const LAYOUTS={
-  '6-10':[[2,2],[5,2],[7,4],[7,7],[4,7],[2,5]],
-  '6-12':[[4,1],[7,1],[10,6],[10,9],[1,9],[1,6]],
-  '6-14':[[1,5],[5,1],[11,2],[12,8],[8,12],[2,11]],
-  '8-12':[[2,4],[4,2],[7,2],[9,4],[9,7],[7,9],[4,9],[2,7]],
-  '8-14':[[3,5],[5,3],[8,3],[10,5],[10,8],[8,10],[5,10],[3,8]],
-  '8-16':[[4,6],[6,4],[9,4],[11,6],[11,9],[9,11],[6,11],[4,9]]
-};
-function startCells(n,np){
-  const t=LAYOUTS[np+'-'+n];
-  if(t) return t.map(([x,y])=>y*n+x);
-  const m=n-2, L=4*(m-1), out=[];            // sinon : répartis sur l'anneau intérieur
-  for(let k=0;k<np;k++){
-    const u=Math.round(k*L/np)%L, side=Math.floor(u/(m-1)), q=u%(m-1);
-    let x,y;
-    if(side===0){ x=1+q; y=1; } else if(side===1){ x=m; y=1+q; }
-    else if(side===2){ x=m-q; y=m; } else { x=1; y=m-q; }
-    out.push(y*n+x);
-  }
-  return out;
-}
-// rot : décalage des places (le joueur k prend la k+rot-ième case de départ), tiré au sort à chaque partie.
-function newBoard(n,np,rot){
-  np=np||2; rot=rot||0;
-  const o=new Array(n*n).fill(-1), c=new Array(n*n).fill(0);
-  startCells(n,np).forEach((i,k)=>{ const p=((k-rot)%np+np)%np; o[i]=p; c[i]=1; });
-  return {n,o,c};
-}
-// Le joueur p ajoute un point en i. Seuil fixe : 4 points, partout.
-function simulate(board,i,p){
-  const n=board.n, o=board.o.slice(), c=board.c.slice();
-  c[i]+=1; o[i]=p;
-  const frames=[{o:o.slice(), c:c.slice(), got:[i]}];
-  let winner=-1;
-  for(let w=0; w<3000; w++){
-    const hot=[];
-    for(let k=0;k<c.length;k++) if(c[k]>=4) hot.push(k);
-    if(!hot.length) break;
-    const got=new Set();
-    for(const k of hot) c[k]-=4;
-    for(const k of hot) for(const m of neighbors(n,k)){ c[m]+=1; o[m]=p; got.add(m); }
-    for(const k of hot) if(c[k]===0) o[k]=-1;
-    frames.push({o:o.slice(), c:c.slice(), got:[...got]});
-    const owners=new Set();
-    for(let k=0;k<c.length;k++) if(c[k]>0) owners.add(o[k]);
-    if(owners.size===1){ winner=[...owners][0]; break; }
-  }
-  return {frames,o,c,winner};
-}
-// Joueur suivant qui a encore au moins une case (les éliminés sont sautés).
-function nextTurn(o,c,p,np){
-  for(let k=1;k<=np;k++){
-    const q=(p+k)%np;
-    for(let i=0;i<c.length;i++) if(c[i]>0 && o[i]===q) return q;
-  }
-  return p;
-}
-function tally(o,c,np){
-  const t=[];
-  for(let k=0;k<np;k++) t.push({cells:0,points:0});
-  for(let k=0;k<c.length;k++) if(c[k]>0 && o[k]>=0 && t[o[k]]){ t[o[k]].cells++; t[o[k]].points+=c[k]; }
-  return t;
-}
-/*END ENGINE*/
-
-(()=>{
+const {newBoard,simulate,nextTurn,tally,SIZES}=window.Engine;
 const $=s=>document.querySelector(s);
 const NAMES=['Bleu','Orange','Vert','Rose','Rouge','Cyan','Violet','Gris'];
 const POS={1:[[50,50]],2:[[30,30],[70,70]],3:[[50,28],[28,70],[72,70]],4:[[30,30],[70,30],[30,70],[70,70]]};
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const SIZES={2:[6,8,10,8],4:[8,10,12,10],6:[10,12,14,12],8:[12,14,16,14]}; // trois tailles + celle par défaut
 const DELAY=matchMedia('(prefers-reduced-motion: reduce)').matches?140:360;
 const KICK_MS=window.__KICK_MS||45000;
-
-const mem={};
-const ss={
-  get(k){ try{ const v=sessionStorage.getItem(k); if(v!==null) return v; }catch(e){} return mem[k]??null; },
-  set(k,v){ mem[k]=v; try{ sessionStorage.setItem(k,v); }catch(e){} },
-  del(k){ delete mem[k]; try{ sessionStorage.removeItem(k); }catch(e){} }
-};
-const lsGet=k=>{ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } };
-const lsSet=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} };
+const rnd=k=>Math.floor(Math.random()*k);
 const rand=len=>{ let s=''; const a=new Uint32Array(len); if(window.crypto&&crypto.getRandomValues) crypto.getRandomValues(a); else for(let i=0;i<len;i++) a[i]=Math.random()*4e9; for(let i=0;i<len;i++) s+=ALPHABET[a[i]%ALPHABET.length]; return s; };
 
-const rnd=k=>Math.floor(Math.random()*k);
-let tok=ss.get('propagation:tok'); if(!tok){ tok=rand(16); ss.set('propagation:tok',tok); }
+/* ---------- stockage local (l'identité reste sur l'appareil, même onglet fermé) ---------- */
+const mem={};
+const store=(kind)=>({
+  get(k){ try{ const v=window[kind].getItem(k); if(v!==null) return v; }catch(e){} return mem[kind+k]??null; },
+  set(k,v){ mem[kind+k]=v; try{ window[kind].setItem(k,v); }catch(e){} },
+  del(k){ delete mem[kind+k]; try{ window[kind].removeItem(k); }catch(e){} }
+});
+const ls=store('localStorage'), ss=store('sessionStorage');
+const PID_RE=/^[A-HJ-NP-Z2-9]{10}$/, SECRET_RE=/^[A-HJ-NP-Z2-9]{20}$/;
+function loadIdent(){
+  try{ const v=JSON.parse(ls.get('propagation:id')); if(v&&PID_RE.test(v.pid)&&SECRET_RE.test(v.secret)) return v; }catch(e){}
+  const v={pid:rand(10),secret:rand(20)}; ls.set('propagation:id',JSON.stringify(v)); return v;
+}
+const recoveryCode=id=>(id.pid+id.secret).match(/.{5}/g).join('-');
 
-let db=null, mode='lobby', code=null, unsub=null, remote=null, me=-1, anim=false, failed=false, n=0, np=2, turnSince=Date.now(), netBlocked=false;
+/* ---------- connexion au serveur ---------- */
+const Net=(()=>{
+  const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
+  const ident=loadIdent();
+  let ws=null, ready=false, authed=false, nextId=1, tries=0, authP, authRes, authRej;
+  const pend=new Map(), subs=new Set(), on={game:[],profile:[],state:[]};
+  const emit=(k,...a)=>on[k].forEach(f=>f(...a));
+  const newAuth=()=>{ authP=new Promise((res,rej)=>{ authRes=res; authRej=rej; }); authP.catch(()=>{}); };
+  newAuth();
+  function raw(o){ if(ws&&ready) ws.send(JSON.stringify(o)); }
+  function rawCall(o){
+    return new Promise((res,rej)=>{
+      if(!ready){ rej({code:'unavailable'}); return; }
+      const id=nextId++; const t=setTimeout(()=>{ pend.delete(id); rej({code:'unavailable'}); },15000);
+      pend.set(id,{res:v=>{clearTimeout(t);res(v);},rej:e=>{clearTimeout(t);rej(e);}}); raw(Object.assign({id},o));
+    });
+  }
+  async function hello(){
+    try{
+      const r=await rawCall({t:'hello',pid:ident.pid,secret:ident.secret,name:ls.get('propagation:name')||''});
+      authed=true; Net.profile=r.profile; Net.features=r.features; authRes(r); emit('state','ready');
+      subs.forEach(code=>raw({t:'sub',code}));
+    }catch(e){ authRej(e); emit('state',e&&e.code==='auth'?'authfail':'down'); }
+  }
+  function connect(){
+    try{ ws=new WebSocket(url); }catch(e){ retry(); return; }
+    ws.onopen=()=>{ ready=true; tries=0; hello(); };
+    ws.onmessage=ev=>{
+      let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+      if(m.t==='res'){ const q=pend.get(m.id); if(q){ pend.delete(m.id); if(m.ok) q.res(m); else q.rej({code:m.code||'unavailable'}); } }
+      else if(m.t==='game') emit('game',m);
+      else if(m.t==='profile'){ Net.profile=m.profile; emit('profile',m.profile); }
+    };
+    ws.onclose=()=>{
+      const was=authed; ready=false; authed=false; for(const q of pend.values()) q.rej({code:'unavailable'}); pend.clear();
+      if(was){ newAuth(); emit('state','down'); }
+      retry();
+    };
+    ws.onerror=()=>{};
+  }
+  function retry(){ tries++; setTimeout(connect,Math.min(5000,400*tries)); }
+  const Net={ident,profile:null,features:{},
+    on(k,f){ on[k].push(f); },
+    // attend la connexion (jusqu'à 90 s : un serveur gratuit qui dormait met du temps à se réveiller)
+    async connected(){ return Promise.race([authP.then(()=>true,()=>false),new Promise(r=>setTimeout(()=>r(false),90000))]); },
+    async call(t,o){ await authP; return rawCall(Object.assign({t},o||{})); },
+    sub(code){ subs.add(code); if(authed) raw({t:'sub',code}); },
+    unsub(code){ subs.delete(code); if(authed) raw({t:'unsub',code}); }
+  };
+  connect();
+  setTimeout(()=>{ if(!ready){ const n=document.querySelector('#net'); if(n) n.textContent='Le serveur se réveille, ça peut prendre une minute…'; } },5000);
+  return Net;
+})();
+
+/* ---------- état de l'interface ---------- */
+let online=false, mode='lobby', code=null, remote=null, me=-1, anim=false, failed=false, n=0, np=2, skew=0, turnSince=Date.now();
 let view={seq:-1,o:null,c:null,turn:0,winner:-1};
 const boardEl=$('#board');
 
-/* ---------- utilitaires interface ---------- */
 let toastT;
 function toast(msg){ $('#toast').textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').textContent=''; },6000); }
-function errMsg(e){
-  const c=e&&e.code;
-  if(c==='quota_exceeded') return "Le serveur est plein, réessaie plus tard.";
-  return "Connexion impossible, réessaie dans un instant.";
+const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.'};
+const errMsg=e=>ERRS[e&&e.code]||'Connexion impossible, réessaie dans un instant.';
+const show=screen=>{ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; updateTitle(); };
+const setHash=v=>{ try{ if(v) location.hash=v; else if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
+const now=()=>Date.now()+skew;
+function fmtLeft(ms){
+  if(ms<=0) return 'moins d’une minute';
+  const s=Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60);
+  if(d>0) return `${d} j ${h} h`;
+  if(h>0) return `${h} h ${String(m).padStart(2,'0')} min`;
+  if(m>0) return `${m} min ${String(s%60).padStart(2,'0')} s`;
+  return `${s} s`;
 }
-function lobbyErr(msg){ $('#lobby-err').textContent=msg||''; }
-function show(screen){ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; }
-function setHash(v){ try{ if(v) location.hash=v; else if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){} }
-function fillSizes(){
-  const [a,b,c,def]=SIZES[$('#np').value]||SIZES[2];
-  $('#size').innerHTML=[a,b,c].map(v=>`<option value="${v}"${v===def?' selected':''}>${v} × ${v}</option>`).join('');
-}
+const fmtTurn=ms=>{ const h=Math.round(ms/3600000); return ms<3600000?`${Math.round(ms/1000)} s`:(h>=24&&h%24===0?`${h/24} j`:`${h} h`); };
+const ord=r=>r===1?'1er':r+'e';
 
 /* ---------- plateau ---------- */
 function buildBoard(size){
@@ -411,11 +426,7 @@ function canPlay(i){
 }
 function refreshCells(){
   const cells=boardEl.children;
-  for(let i=0;i<cells.length;i++){
-    const ok=canPlay(i);
-    cells[i].disabled=!ok;
-    cells[i].classList.toggle('can',ok);
-  }
+  for(let i=0;i<cells.length;i++){ const ok=canPlay(i); cells[i].disabled=!ok; cells[i].classList.toggle('can',ok); }
 }
 function playFrames(frames,done){
   anim=true; refreshCells();
@@ -428,7 +439,7 @@ function playFrames(frames,done){
   step();
 }
 function setView(v){
-  if(v.seq!==view.seq||v.turn!==view.turn) turnSince=Date.now();
+  if(v.seq!==view.seq||v.turn!==view.turn) turnSince=now();
   view=v; paint(v,[]); renderMeta();
 }
 function resetView(){ view={seq:-1,o:null,c:null,turn:0,winner:-1}; }
@@ -436,54 +447,78 @@ function resetView(){ view={seq:-1,o:null,c:null,turn:0,winner:-1}; }
 /* ---------- affichage de la partie ---------- */
 function getNames(){
   if(mode!=='online') return NAMES.slice(0,np);
-  const r=[];
-  for(let i=0;i<np;i++) r.push(remote.players[i]?((remote.names[i]||'')||NAMES[i]):'En attente…');
-  return r;
+  return remote.seats.map((s,i)=>s.filled?(s.name||NAMES[i]):'En attente…');
+}
+function resultLine(names){
+  const r=remote&&remote.result; if(!r||me<0) return '';
+  const rank=r.ranks[me];
+  let s=(view.winner===me?'Tu as gagné la partie.':`${names[view.winner]||'Un joueur'} a gagné la partie. Tu finis ${ord(rank)}.`);
+  if(r.ranked) s+=` Élo ${r.after[me]} (${r.delta[me]>=0?'+':'−'}${Math.abs(r.delta[me])}).`; else s+=' Partie amicale, sans Élo.';
+  return s;
 }
 function renderMeta(){
   if(!view.o||mode==='lobby') return;
-  const names=getNames(), t=tally(view.o,view.c,np), over=view.winner>=0;
-  const online=mode==='online';
-  const waiting=online&&remote.status==='waiting';
-  const joined=online?remote.players.filter(Boolean).length:np;
+  const names=getNames(), t=tally(view.o,view.c,np), over=view.winner>=0||(online&&remote&&remote.status==='done');
+  const isOnline=mode==='online';
+  const waiting=isOnline&&remote.status==='waiting';
+  const joined=isOnline?remote.seats.filter(s=>s.filled).length:np;
+  const showRating=isOnline&&remote.ranked;
   let h='';
   for(let i=0;i<np;i++){
-    const seat=!online||!!remote.players[i];
+    const seat=!isOnline||remote.seats[i].filled;
     const out=!waiting&&seat&&t[i].cells===0;
     const active=!over&&!waiting&&view.turn===i;
     const st=!seat?'place libre':out?'éliminé':`${t[i].cells} case${t[i].cells>1?'s':''} · ${t[i].points} pt${t[i].points>1?'s':''}`;
-    h+=`<div class="pl${active?' active':''}${out?' out':''}${seat?'':' empty'}" style="--pc:var(--p${i})"><span class="sw" data-sh="${i}"></span><div class="who"><span class="nm"></span><span class="st">${st}</span></div></div>`;
+    h+=`<div class="pl${active?' active':''}${out?' out':''}${seat?'':' empty'}" style="--pc:var(--p${i})"><span class="sw" data-sh="${i}"></span><div class="who"><div class="top1"><span class="nm"></span><span class="rt"></span></div><span class="st">${st}</span></div></div>`;
   }
   $('#players').innerHTML=h;
-  [...$('#players').children].forEach((el,i)=>{ el.querySelector('.nm').textContent=names[i]+(online&&me===i?' (toi)':''); });
+  [...$('#players').children].forEach((el,i)=>{
+    el.querySelector('.nm').textContent=names[i]+(isOnline&&me===i?' (toi)':'');
+    el.querySelector('.rt').textContent=showRating&&remote.seats[i].filled&&remote.seats[i].rating!=null?remote.seats[i].rating:'';
+  });
   let s;
-  const iAmOut=online&&me>=0&&!waiting&&t[me].cells===0;
+  const iAmOut=isOnline&&me>=0&&!waiting&&t[me].cells===0;
   if(waiting) s=`En attente des joueurs (${joined} / ${np})…`;
   else if(over){
-    if(online&&me>=0) s=view.winner===me?'Tu as gagné la partie.':`${names[view.winner]} a gagné la partie.`;
+    if(isOnline&&me>=0) s=resultLine(names)||(view.winner===me?'Tu as gagné la partie.':`${names[view.winner]} a gagné la partie.`);
     else s=`${names[view.winner]} gagne la partie.`;
   }
-  else if(online&&me<0) s=`Tu regardes la partie. Au tour de ${names[view.turn]}.`;
+  else if(isOnline&&me<0) s=`Tu regardes la partie. Au tour de ${names[view.turn]}.`;
   else if(iAmOut) s=`Tu es éliminé. Au tour de ${names[view.turn]}.`;
-  else if(online&&view.turn===me) s='À toi de jouer.';
+  else if(isOnline&&view.turn===me) s='À toi de jouer.';
   else s=`Au tour de ${names[view.turn]}.`;
   $('#status').textContent=s;
   $('#waiting').hidden=!waiting;
   $('#gcode').textContent=code||'';
   $('#startnow').hidden=!(waiting&&me===0&&joined>=2);
-  $('#waitnote').textContent=waiting?`Envoie le lien à tes amis : en l’ouvrant, ils prennent une place. La partie démarre quand les ${np} places sont prises. Ils peuvent aussi saisir le code sur la page d’accueil.`:'';
-  $('#rematch').hidden=!over||(online&&me<0);
+  $('#waitnote').textContent=waiting?(`Envoie le lien à tes amis : en l’ouvrant, ils prennent une place. La partie démarre quand les ${np} places sont prises.`+(remote.mode==='long'?` Chacun aura ensuite ${fmtTurn(remote.turnMs)} pour jouer chaque coup, et peut fermer la page entre deux coups.`:'')):'';
+  $('#rematch').hidden=!over||(isOnline&&me<0);
+  $('#resign').hidden=!(isOnline&&!over&&!waiting&&me>=0&&!iAmOut);
+  if($('#resign').hidden) resetResign();
   boardEl.dataset.turn=over?String(view.winner):String(view.turn);
-  refreshCells();
-  updateKick();
+  refreshCells(); updateKick(); updateTimer(); updateTitle();
 }
 function updateKick(){
   const b=$('#kick');
-  const show=mode==='online'&&!!remote&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&Date.now()-turnSince>KICK_MS;
+  const show=mode==='online'&&!!remote&&remote.mode==='live'&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&now()-turnSince>KICK_MS;
   b.hidden=!show;
   if(show) b.textContent=`${getNames()[view.turn]} ne répond plus ? L’éliminer`;
 }
-setInterval(updateKick,1000);
+function updateTimer(){
+  const el=$('#timer');
+  if(mode!=='online'||!remote||remote.mode!=='long'||remote.status!=='playing'||!remote.deadline||view.winner>=0){ el.hidden=true; el.classList.remove('urgent'); return; }
+  const left=remote.deadline-now(), mine=me>=0&&view.turn===me;
+  el.hidden=false;
+  el.textContent=mine?`Il te reste ${fmtLeft(left)} pour jouer.`:`${getNames()[view.turn]} a encore ${fmtLeft(left)}.`;
+  el.classList.toggle('urgent',mine&&left<3600000);
+}
+function updateTitle(){
+  let t='Propagation';
+  if(mode==='online'&&remote&&remote.status==='playing'&&me>=0&&view.turn===me) t='● À toi de jouer · Propagation';
+  else if(mode==='lobby'&&lobbyMine>0) t=`(${lobbyMine}) Propagation`;
+  document.title=t;
+}
+setInterval(()=>{ updateKick(); updateTimer(); },1000);
 
 /* ---------- jouer un coup ---------- */
 async function play(i){
@@ -493,19 +528,16 @@ async function play(i){
   const nv={o:r.o,c:r.c,turn:r.winner>=0?p:nextTurn(r.o,r.c,p,np),winner:r.winner,seq:view.seq+1};
   failed=false;
   playFrames(r.frames,()=>{
-    if(failed){ failed=false; resetView(); applyRemote(); return; }
+    if(failed){ failed=false; resync(); return; }
     setView(nv);
     if(mode==='online'&&remote&&remote.seq>view.seq) applyRemote();
   });
   if(mode==='online'){
-    try{
-      await db.doc('games/'+code).update({o:r.o,c:r.c,turn:nv.turn,seq:nv.seq,last:{i,p},winner:r.winner,status:r.winner>=0?'done':'playing'});
-    }catch(e){
-      toast(errMsg(e)+' Ton coup n’a pas été envoyé.');
-      if(anim) failed=true; else { resetView(); applyRemote(); }
-    }
+    try{ await Net.call('move',{code,i}); }
+    catch(e){ toast(errMsg(e)+' Ton coup n’a pas été pris en compte.'); if(anim) failed=true; else resync(); }
   }
 }
+function resync(){ resetView(); remote=null; if(code) Net.call('sub',{code}).catch(()=>{}); }
 boardEl.addEventListener('click',e=>{
   const el=e.target.closest('.cell'); if(!el) return;
   play(+el.dataset.i);
@@ -517,123 +549,183 @@ function applyRemote(){
   np=d.np;
   if(!boardEl.children.length||n!==d.n){ buildBoard(d.n); resetView(); }
   if(d.seq>view.seq){
-    const nv={o:d.o,c:d.c,turn:d.turn,winner:d.winner,seq:d.seq};
+    const nv={o:d.o,c:d.c,turn:d.turn,winner:d.status==='done'?d.winner:-1,seq:d.seq};
     if(d.last&&view.o&&d.seq===view.seq+1){
       const r=simulate({n:d.n,o:view.o,c:view.c},d.last.i,d.last.p);
       playFrames(r.frames,()=>{ setView(nv); if(remote.seq>view.seq) applyRemote(); });
     } else setView(nv);
   } else renderMeta();
 }
-function onRemote(d){
-  remote=d; me=d.players.indexOf(tok); np=d.np;
+Net.on('game',m=>{
+  if(mode!=='online'||m.code!==code) return;
+  if(!m.g){ toast('Cette partie n’existe plus.'); leave(); return; }
+  skew=m.now-Date.now();
+  remote=m.g; me=m.g.me; np=m.g.np;
   if(anim) renderMeta(); else applyRemote();
-}
+});
 function enterGame(c){
   code=c; mode='online'; remote=null; me=-1; resetView(); anim=false;
   ss.set('propagation:game',c); setHash(c);
   boardEl.innerHTML=''; n=0;
   show('game');
-  $('#status').textContent='Chargement de la partie…';
-  $('#players').innerHTML=''; $('#waiting').hidden=true; $('#rematch').hidden=true; $('#kick').hidden=true;
-  unsub=db.doc('games/'+c).onSnapshot(snap=>{
-    if(!snap.exists){ toast('Cette partie n’existe plus.'); leave(); return; }
-    onRemote(snap.data());
-  },e=>{ toast(errMsg(e)); leave(); });
+  $('#status').textContent='Chargement de la partie…'; $('#timer').hidden=true;
+  $('#players').innerHTML=''; $('#waiting').hidden=true; $('#rematch').hidden=true; $('#kick').hidden=true; $('#resign').hidden=true;
+  Net.sub(c);
 }
 async function createGame(){
-  lobbyErr(''); busy(true);
+  $('#create-err').textContent=''; busy(true);
   try{
-    const size=+$('#size').value||8, k=+$('#np').value||2, nm=$('#name').value.trim();
-    lsSet('propagation:name',nm);
-    let c=null;
-    for(let t=0;t<6&&!c;t++){ const cand=rand(4); if(!(await db.doc('games/'+cand).get()).exists) c=cand; }
-    if(!c) throw {code:'unavailable'};
-    const b=newBoard(size,k,rnd(k));
-    const players=new Array(k).fill(null), names=new Array(k).fill('');
-    players[0]=tok; names[0]=nm;
-    await db.doc('games/'+c).set({code:c,n:size,np:k,status:'waiting',players,names,o:b.o,c:b.c,turn:rnd(k),seq:0,last:null,winner:-1,created:Date.now()});
-    enterGame(c);
-  }catch(e){ lobbyErr(errMsg(e)); }
+    const o={np:+$('#np').value||2,n:+$('#size').value,mode:$('#mode').value,hours:+$('#hours').value,ranked:$('#ranked').checked};
+    if(window.__TURN_MS) o.turnMs=window.__TURN_MS;   // essais uniquement
+    const r=await Net.call('create',o);
+    enterGame(r.code);
+  }catch(e){ $('#create-err').textContent=errMsg(e); }
   busy(false);
 }
 async function joinGame(c,silent){
-  if(!silent) lobbyErr('');
+  if(!silent) $('#lobby-err').textContent='';
   busy(true);
-  try{
-    lsSet('propagation:name',$('#name').value.trim());
-    await db.doc('games/'+c).join(tok,$('#name').value.trim());
-    enterGame(c);
-  }catch(e){
-    if(!silent) lobbyErr(e&&e.code==='not_found'?'Code introuvable. Vérifie les 4 caractères.':errMsg(e));
-  }
+  try{ await Net.call('join',{code:c}); enterGame(c); }
+  catch(e){ if(!silent) $('#lobby-err').textContent=errMsg(e); }
   busy(false);
 }
-async function startNow(){
-  try{
-    const players=remote.players.filter(Boolean);
-    if(players.length<2) return;
-    const names=players.map(tk=>remote.names[remote.players.indexOf(tk)]);
-    const b=newBoard(remote.n,players.length,rnd(players.length));
-    await db.doc('games/'+code).update({np:players.length,players,names,o:b.o,c:b.c,turn:rnd(players.length),seq:remote.seq+1,last:null,winner:-1,status:'playing'});
-  }catch(e){ toast(errMsg(e)); }
-}
-async function kick(){
-  try{
-    const idx=view.turn, o=view.o.slice(), c=view.c.slice();
-    for(let k=0;k<c.length;k++) if(o[k]===idx){ o[k]=-1; c[k]=0; }
-    const owners=new Set(); for(let k=0;k<c.length;k++) if(c[k]>0) owners.add(o[k]);
-    const winner=owners.size===1?[...owners][0]:-1;
-    const turn=winner>=0?winner:nextTurn(o,c,idx,np);
-    await db.doc('games/'+code).update({o,c,turn,seq:remote.seq+1,last:null,winner,status:winner>=0?'done':'playing'});
-  }catch(e){ toast(errMsg(e)); }
-}
-async function rematch(){
+const act=(t,msg)=>async()=>{ try{ await Net.call(t,{code}); }catch(e){ toast(errMsg(e)); } };
+let resignT=null;
+function resetResign(){ clearTimeout(resignT); resignT=null; $('#resign').textContent='Abandonner'; }
+$('#resign').addEventListener('click',async()=>{
+  if(!resignT){ $('#resign').textContent='Confirmer l’abandon'; resignT=setTimeout(resetResign,4000); return; }
+  resetResign(); try{ await Net.call('resign',{code}); }catch(e){ toast(errMsg(e)); }
+});
+$('#startnow').addEventListener('click',act('start'));
+$('#kick').addEventListener('click',act('kick'));
+$('#rematch').addEventListener('click',async()=>{
   if(mode==='local'){ startLocal(); return; }
-  try{
-    const b=newBoard(remote.n,remote.np,rnd(remote.np));
-    await db.doc('games/'+code).update({o:b.o,c:b.c,turn:rnd(remote.np),seq:remote.seq+1,last:null,winner:-1,status:'playing'});
-  }catch(e){ toast(errMsg(e)); }
-}
+  try{ await Net.call('rematch',{code}); }catch(e){ toast(errMsg(e)); }
+});
 
 /* ---------- même écran ---------- */
 function startLocal(){
-  if(unsub){ unsub(); unsub=null; }
+  if(code) Net.unsub(code);
   mode='local'; remote=null; code=null; me=-1; anim=false;
   np=+$('#np').value||2;
   const b=newBoard(+$('#size').value||8,np,rnd(np));
   buildBoard(b.n);
   show('game');
+  $('#resign').hidden=true; $('#timer').hidden=true; $('#kick').hidden=true;
   resetView();
   setView({o:b.o,c:b.c,turn:rnd(np),winner:-1,seq:0});
 }
-
 function leave(){
-  if(unsub){ unsub(); unsub=null; }
+  if(code) Net.unsub(code);
   mode='lobby'; remote=null; code=null; me=-1; anim=false; resetView();
   ss.del('propagation:game'); setHash('');
-  show('lobby');
+  show('lobby'); loadLobby();
 }
 
-/* ---------- salon ---------- */
-function busy(b){
-  const off=b||!db||netBlocked;
-  $('#create').disabled=off; $('#join').disabled=off;
+/* ---------- salon : compte, parties, classement ---------- */
+let lobbyMine=0;
+function busy(b){ const off=b||!online; $('#create').disabled=off; $('#join').disabled=off; }
+function renderProfile(p){
+  if(!p) return;
+  $('#elo').textContent=p.elo;
+  const ng=p.games, nw=p.wins;
+  $('#pstats').textContent=ng?`${ng} partie${ng>1?'s':''} classée${ng>1?'s':''} · ${nw} victoire${nw>1?'s':''}`:'Pas encore de partie classée. Tout le monde commence à 1000.';
+  const nm=$('#name'); if(document.activeElement!==nm) nm.value=p.name;
 }
-$('#name').value=lsGet('propagation:name');
-fillSizes();
+Net.on('profile',renderProfile);
+function renderGames(list,skewNow){
+  const box=$('#games'); box.textContent='';
+  lobbyMine=list.filter(s=>s.status==='playing'&&s.turn===s.me).length;
+  if(!list.length){ const p=document.createElement('p'); p.className='note'; p.textContent='Aucune partie pour l’instant. Crée-en une ou rejoins un ami avec son code.'; box.append(p); updateTitle(); return; }
+  for(const s of list){
+    const mineTurn=s.status==='playing'&&s.turn===s.me;
+    const b=document.createElement('button'); b.className='gitem'+(mineTurn?' mine':''); b.style.setProperty('--pc',`var(--p${Math.max(0,s.me)})`);
+    b.innerHTML=`<span class="sw" data-sh="${Math.max(0,s.me)}"></span><span class="gi"><span class="g1"></span><span class="g2"></span></span>`;
+    b.querySelector('.g1').textContent=`Partie ${s.code} · ${s.mode==='long'?'Longue durée':'Rapide'} · ${s.np} joueurs · ${s.n}×${s.n}`;
+    const left=s.deadline?fmtLeft(s.deadline-(Date.now()+skewNow)):'';
+    let t;
+    if(s.status==='waiting') t=`En attente de joueurs (${s.filled}/${s.np})`;
+    else if(s.status==='playing') t=mineTurn?`À toi de jouer${left?' · '+left:''}`:`Au tour de ${s.names[s.turn]||NAMES[s.turn]}${left?' · '+left:''}`;
+    else if(s.result) t=`Terminée · ${s.winner===s.me?'victoire':ord(s.result.rank)}${s.result.ranked&&s.result.delta!=null?` · Élo ${s.result.delta>=0?'+':'−'}${Math.abs(s.result.delta)}`:''}`;
+    else t='Terminée';
+    b.querySelector('.g2').textContent=t;
+    b.addEventListener('click',()=>enterGame(s.code));
+    box.append(b);
+  }
+  updateTitle();
+}
+async function loadLobby(){
+  if(!online||mode!=='lobby') return;
+  try{
+    const r=await Net.call('mygames'); renderProfile(r.profile); renderGames(r.games,r.now-Date.now());
+  }catch(e){ if(e.code!=='unavailable') toast(errMsg(e)); }
+  loadTop();
+}
+async function loadTop(){
+  if(!online||$('#topbox').open===false) return;
+  try{
+    const r=await Net.call('top'), ol=$('#top'); ol.textContent='';
+    r.top.forEach((p,i)=>{
+      const li=document.createElement('li'); if(p.me) li.className='me';
+      const a=document.createElement('span'); a.className='r'; a.textContent=i+1;
+      const b=document.createElement('span'); b.className='n'; b.textContent=p.name;
+      const c=document.createElement('span'); c.className='e'; c.textContent=p.elo;
+      li.append(a,b,c); ol.append(li);
+    });
+    $('#topnote').textContent=r.top.length?(r.myRank?`Tu es ${ord(r.myRank)} sur ${r.total}.`:'Joue une partie classée pour apparaître dans le classement.'):'Personne n’est encore classé. Termine une partie classée pour ouvrir le bal.';
+  }catch(e){}
+}
+$('#topbox').addEventListener('toggle',loadTop);
+setInterval(()=>{ if(mode==='lobby'&&!document.hidden) loadLobby(); },30000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&mode==='lobby') loadLobby(); });
+
+$('#name').addEventListener('change',async e=>{
+  const nm=e.target.value.trim(); if(!nm||!online) return;
+  ls.set('propagation:name',nm);
+  try{ const r=await Net.call('name',{name:nm}); renderProfile(r.profile); }catch(err){ toast(errMsg(err)); }
+});
+$('#name').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); });
+
+/* récupération de compte */
+$('#rcode').textContent=recoveryCode(Net.ident);
+$('#rcopy').addEventListener('click',async()=>{
+  try{ await navigator.clipboard.writeText(recoveryCode(Net.ident)); $('#rcopy').textContent='Code copié'; setTimeout(()=>{ $('#rcopy').textContent='Copier mon code'; },1800); }
+  catch(e){ const r=document.createRange(); r.selectNodeContents($('#rcode')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('Code sélectionné : copie-le avec Ctrl+C.'); }
+});
+let useT=null;
+$('#ruse').addEventListener('click',()=>{
+  $('#rerr').textContent='';
+  const v=$('#rin').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!PID_RE.test(v.slice(0,10))||!SECRET_RE.test(v.slice(10))||v.length!==30){ $('#rerr').textContent='Ce code n’est pas valide. Il fait 30 caractères (lettres et chiffres).'; return; }
+  if(!useT){ $('#ruse').textContent='Confirmer : remplace ce compte'; useT=setTimeout(()=>{ useT=null; $('#ruse').textContent='Utiliser ce code'; },5000); return; }
+  clearTimeout(useT);
+  ls.set('propagation:id',JSON.stringify({pid:v.slice(0,10),secret:v.slice(10)})); ss.del('propagation:game');
+  location.href=location.pathname;      // recharge avec le compte retrouvé
+});
+
+/* nouvelle partie */
+function fillSizes(){
+  const [a,b,c,def]=SIZES[$('#np').value]||SIZES[2];
+  $('#size').innerHTML=[a,b,c].map(v=>`<option value="${v}"${v===def?' selected':''}>${v} × ${v}</option>`).join('');
+}
+function updateModeNote(){
+  const long=$('#mode').value==='long';
+  $('#hoursbox').hidden=!long;
+  let t=long?'Chaque joueur a le temps choisi pour jouer son coup, puis tu peux fermer la page. Un joueur qui dépasse le délai est éliminé. Retrouve tes parties plus haut, dans « Mes parties ».':'Tout le monde joue en direct. Si quelqu’un ne répond plus, les autres peuvent l’éliminer au bout de 45 secondes.';
+  if(long&&online&&Net.features&&Net.features.durable===false) t+=' Attention : ce serveur ne garde pas les parties s’il redémarre ou s’endort, une partie longue risque d’être perdue (voir le README, section « Garder les parties »).';
+  $('#modenote').textContent=t;
+}
 $('#np').addEventListener('change',fillSizes);
+$('#mode').addEventListener('change',updateModeNote);
 $('#create').addEventListener('click',createGame);
+$('#local').addEventListener('click',startLocal);
 $('#join').addEventListener('click',()=>{
   const c=$('#code').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
-  if(c.length!==4){ lobbyErr('Le code fait 4 caractères.'); return; }
+  if(c.length!==4){ $('#lobby-err').textContent='Le code fait 4 caractères.'; return; }
   joinGame(c,false);
 });
 $('#code').addEventListener('input',e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''); });
 $('#code').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#join').click(); });
-$('#local').addEventListener('click',startLocal);
-$('#rematch').addEventListener('click',rematch);
-$('#startnow').addEventListener('click',startNow);
-$('#kick').addEventListener('click',kick);
 $('#leave').addEventListener('click',leave);
 $('#copy').addEventListener('click',async()=>{
   const el=$('#gcode');
@@ -646,15 +738,23 @@ $('#copy').addEventListener('click',async()=>{
   }
 });
 
+/* ---------- démarrage ---------- */
+fillSizes(); updateModeNote();
+$('#name').value=ls.get('propagation:name')||'';
+Net.on('state',st=>{
+  if(st==='ready'){ online=true; $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.'; busy(false); updateModeNote(); renderProfile(Net.profile); }
+  else if(st==='down'){ online=false; busy(false); $('#net').textContent='Connexion perdue, reconnexion…'; }
+  else if(st==='authfail'){ online=false; busy(false); $('#net').textContent='Compte non reconnu par le serveur. Utilise ton code de récupération.'; }
+});
 (async()=>{
   const hashCode=(location.hash||'').slice(1).toUpperCase();
-  const wanted=/^[A-Z0-9]{4}$/.test(hashCode)?hashCode:ss.get('propagation:game');
+  const wanted=/^[A-HJ-NP-Z2-9]{4}$/.test(hashCode)?hashCode:ss.get('propagation:game');
   if(wanted) $('#code').value=wanted;
-  try{ db=window.propagationNet?await propagationNet.connected():null; }catch(e){ db=null; }
-  if(!db) $('#net').textContent='Impossible de joindre le serveur de jeu. Recharge la page. Le mode « même écran » fonctionne.';
-  else $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.';
-  busy(false);
-  if(db&&wanted) joinGame(wanted,true);
+  const ok=await Net.connected();
+  online=ok; busy(false);
+  if(!ok){ $('#net').textContent='Impossible de joindre le serveur de jeu. Recharge la page. Le mode « même écran » fonctionne.'; $('#games').innerHTML='<p class="note">Serveur injoignable.</p>'; return; }
+  if(wanted) await joinGame(wanted,true);
+  if(mode==='lobby') loadLobby();
 })();
 })();
 </script>

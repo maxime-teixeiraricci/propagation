@@ -1,19 +1,23 @@
 # Propagation
 
-Jeu de grille de 2 à 8 joueurs. Chacun place des points sur ses cases ; à 4 points, une case déborde sur ses 4 voisines. Le dernier joueur qui a encore des cases gagne. Parties à distance avec un lien ou un code.
+Jeu de grille de 2 à 8 joueurs. Chacun place des points sur ses cases ; à 4 points, une case déborde sur ses 4 voisines. Le dernier joueur qui a encore des cases gagne. Parties à distance avec un lien ou un code, en direct ou sur plusieurs jours, avec un classement Élo.
 
-Contenu : `server.js` (le serveur, aucune dépendance), `index.html` (le jeu), `package.json`, `render.yaml` (déploiement Render).
-Il faut seulement Node 18 ou plus.
+Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `index.html` (le jeu), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
 
 ## Modes
 
 - 2, 4, 6 ou 8 joueurs, chacun pour soi. Chaque joueur a une couleur et une forme de point.
-- La grille s'adapte au nombre de joueurs (6 à 10 à deux, jusqu'à 16 à huit).
-- Départs équitables : à 2, 4 et 8 joueurs, les départs sont symétriques (chaque joueur est l'image d'un autre par une rotation ou un miroir de la grille), donc tous ont exactement la même surface autour d'eux. À 6 joueurs, la symétrie parfaite est impossible sur une grille carrée : les placements donnent à chacun la même surface à une case près. La place de chacun et le premier joueur sont tirés au sort à chaque partie.
-- Un joueur qui n'a plus aucune case est éliminé, son tour est sauté.
-- Tant que la partie n'est pas complète, le créateur peut la lancer avec les joueurs déjà présents (« Lancer maintenant »).
-- Si quelqu'un ne joue plus pendant 45 secondes, les autres voient un bouton « L'éliminer » pour débloquer la partie.
-- « Revanche » relance une partie avec les mêmes joueurs.
+- **Rapide** : tout le monde est connecté. Si quelqu'un ne joue plus pendant 45 secondes, les autres peuvent l'éliminer.
+- **Longue durée** : chaque joueur a 12, 24, 48 ou 72 heures par coup. On peut fermer la page entre deux coups. Un joueur qui dépasse son délai est éliminé.
+- Départs équitables : à 2, 4 et 8 joueurs, les départs sont symétriques ; à 6 joueurs, chacun a la même surface à une case près. La place de chacun et le premier joueur sont tirés au sort.
+- Le créateur peut lancer la partie avant qu'elle soit pleine (« Lancer maintenant »), « Abandonner » est possible à tout moment, « Revanche » relance avec les mêmes joueurs.
+
+## Compte, parties et Élo
+
+- Au premier passage, le navigateur crée un compte automatiquement, sans inscription. Il est gardé sur l'appareil.
+- « Mes parties » liste toutes tes parties avec ton côté : on y reprend là où on s'était arrêté, même après avoir fermé la page. Ton titre d'onglet indique quand c'est ton tour.
+- **Code de récupération** : dans « Mon compte », un code de 30 caractères redonne ton compte (nom, Élo, parties) sur un autre appareil. Il donne accès au compte : ne le partage pas.
+- **Élo** : tout le monde commence à 1000, K = 32. Chaque paire de joueurs compte comme un duel selon le rang final (à N joueurs, chaque duel pèse K/(N-1)). Seules les parties « classées » dont toutes les places sont prises par des comptes différents comptent. Classement des 20 premiers dans le salon.
 
 ## Essayer chez toi
 
@@ -31,9 +35,20 @@ Ouvre http://localhost:3000. « Jouer sur le même écran » permet de tester se
 
 À chaque mise à jour du dépôt, Render redéploie tout seul.
 
+## Garder les parties (indispensable pour les parties de plusieurs jours)
+
+Le disque de l'offre gratuite de Render est effacé à chaque redémarrage ou mise en veille. Sans stockage externe, les parties longues sont perdues. La solution gratuite : une base Upstash Redis.
+
+1. Crée un compte gratuit sur upstash.com, puis « Create Database » (Redis, région proche, plan Free).
+2. Dans la page de la base, section **REST API**, copie `UPSTASH_REDIS_REST_URL` et `UPSTASH_REDIS_REST_TOKEN`.
+3. Sur Render : ton service > Environment, ajoute ces deux variables avec leurs valeurs. Render redémarre.
+4. Vérifie : `https://ton-adresse.onrender.com/health` doit afficher `"durable":true`.
+
+Le serveur sauvegarde chaque coup, et recharge tout au démarrage. Les parties terminées sont gardées 30 jours, les parties en attente 7 jours, les parties en cours inactives 3 jours.
+
 ## À savoir
 
-- L'offre gratuite de Render met le service en veille après environ 15 minutes sans visite. Le premier chargement après une veille prend 30 à 60 secondes.
-- Les parties sont gardées en mémoire : elles disparaissent si le serveur redémarre ou s'endort. Elles sont oubliées après 24 h sans coup.
-- Quiconque connaît le lien ou le code d'une partie peut la rejoindre (si une place est libre) ou la regarder.
-- Un joueur retrouve sa place en rechargeant la page, mais pas s'il ferme l'onglet.
+- Après une mise en veille (15 min sans visite sur l'offre gratuite), le premier chargement prend 30 à 60 secondes. Les délais des parties longues ne sont contrôlés que serveur réveillé ; au réveil, chaque joueur reçoit 30 minutes de grâce. Pour éviter la veille, un service gratuit comme UptimeRobot peut appeler `/health` toutes les 5 minutes.
+- Pas de notification : on voit que c'est son tour en ouvrant la page (le titre de l'onglet l'indique).
+- Quiconque connaît le code d'une partie peut la rejoindre (si une place est libre) ou la regarder.
+- Rien n'empêche quelqu'un de créer plusieurs comptes pour s'échanger de l'Élo : les parties amicales (case « Partie classée » décochée) ne comptent pas.
