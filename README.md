@@ -2,7 +2,7 @@
 
 Jeu de grille de 2 à 8 joueurs. Chacun place des points sur ses cases ; à 4 points, une case déborde sur ses 4 voisines. Le dernier joueur qui a encore des cases gagne. Parties à distance avec un lien ou un code, en direct ou sur plusieurs jours, avec un classement Élo.
 
-Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `index.html` (le jeu), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
+Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `index.html` (le jeu), `sw.js` + `manifest.webmanifest` + icônes (notifications et installation sur l'écran d'accueil), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
 
 ## Modes
 
@@ -18,6 +18,15 @@ Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles
 - « Mes parties » liste toutes tes parties avec ton côté : on y reprend là où on s'était arrêté, même après avoir fermé la page. Ton titre d'onglet indique quand c'est ton tour.
 - **Code de récupération** : dans « Mon compte », un code de 30 caractères redonne ton compte (nom, Élo, parties) sur un autre appareil. Il donne accès au compte : ne le partage pas.
 - **Élo** : tout le monde commence à 1000, K = 32. Chaque paire de joueurs compte comme un duel selon le rang final (à N joueurs, chaque duel pèse K/(N-1)). Seules les parties « classées » dont toutes les places sont prises par des comptes différents comptent. Classement des 20 premiers dans le salon.
+
+## Notifications « c'est ton tour »
+
+- Dans « Mon compte », le bouton « Activer les notifications » prévient cet appareil quand c'est son tour, même page fermée. Il faut l'activer sur chaque appareil (ordinateur, téléphone).
+- En partie longue, un rappel est envoyé quand il reste peu de temps : 3 heures, ou un quart du délai s'il est plus court.
+- Pas de notification si tu regardes déjà la partie, page visible.
+- **iPhone / iPad** : Apple n'autorise les notifications que pour un site ajouté à l'écran d'accueil (iOS 16.4 ou plus). Dans Safari : Partager, « Sur l'écran d'accueil », puis ouvre le jeu depuis son icône et active les notifications.
+- Rien à configurer côté serveur : la clé d'envoi est créée au premier démarrage. Avec une base Upstash elle est conservée ; sans, elle change à chaque redémarrage et chaque appareil se réabonne tout seul à l'ouverture suivante de la page.
+- Les notifications ne contiennent aucune donnée de partie : le navigateur reçoit un simple signal, puis demande au serveur quelles parties l'attendent. Seuls les services de notification des navigateurs (Google, Mozilla, Apple, Microsoft) sont acceptés comme destinations.
 
 ## Essayer chez toi
 
@@ -49,6 +58,6 @@ Le serveur sauvegarde chaque coup, et recharge tout au démarrage. Les parties t
 ## À savoir
 
 - Après une mise en veille (15 min sans visite sur l'offre gratuite), le premier chargement prend 30 à 60 secondes. Les délais des parties longues ne sont contrôlés que serveur réveillé ; au réveil, chaque joueur reçoit 30 minutes de grâce. Pour éviter la veille, un service gratuit comme UptimeRobot peut appeler `/health` toutes les 5 minutes.
-- Pas de notification : on voit que c'est son tour en ouvrant la page (le titre de l'onglet l'indique).
+- Le service gratuit de Render s'endort : une notification n'est envoyée que lorsque le serveur est réveillé (voir UptimeRobot ci-dessus pour qu'il ne dorme pas).
 - Quiconque connaît le code d'une partie peut la rejoindre (si une place est libre) ou la regarder.
 - Rien n'empêche quelqu'un de créer plusieurs comptes pour s'échanger de l'Élo : les parties amicales (case « Partie classée » décochée) ne comptent pas.

@@ -2,7 +2,7 @@
   "name": "propagation",
   "version": "1.0.0",
   "private": true,
-  "description": "Jeu de grille de 2 à 8 joueurs, parties à distance, Élo",
+  "description": "Jeu de grille de 2 à 8 joueurs, parties à distance, Élo, notifications",
   "scripts": { "start": "node server.js" },
   "engines": { "node": ">=18" }
 }

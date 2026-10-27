@@ -1,0 +1,16 @@
+{
+  "name": "Propagation",
+  "short_name": "Propagation",
+  "description": "Jeu de grille de 2 à 8 joueurs : à 4 points, une case déborde sur ses voisines.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#E9EEF2",
+  "theme_color": "#14202B",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

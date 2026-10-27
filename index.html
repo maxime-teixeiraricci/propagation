@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Propagation</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#14202B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Propagation">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=DM+Mono:wght@400;500&family=Familjen+Grotesk:wght@400;500;600&display=swap">
@@ -187,6 +193,12 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
         <div class="elo" aria-live="polite"><small>Élo</small><span id="elo">…</span></div>
       </div>
       <p class="note" id="pstats"></p>
+      <div class="stack" id="notif" hidden>
+        <div class="row" style="align-items:center">
+          <p class="note" id="nstate" style="flex:1 1 200px"></p>
+          <button class="btn ghost small" id="nbtn"></button>
+        </div>
+      </div>
       <details>
         <summary>Retrouver mon compte sur un autre appareil</summary>
         <p class="note">Ce code te redonne ton nom, ton Élo et toutes tes parties, avec ton côté. Garde-le, et ne le partage pas : il donne accès à ton compte.</p>
@@ -703,6 +715,72 @@ $('#ruse').addEventListener('click',()=>{
   location.href=location.pathname;      // recharge avec le compte retrouvé
 });
 
+
+/* ---------- notifications « c'est ton tour » (Web Push) ---------- */
+const Notif=(()=>{
+  const supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&window.isSecureContext;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  const b64=s=>{ const p='='.repeat((4-s.length%4)%4); const r=atob((s+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(r,c=>c.charCodeAt(0)); };
+  const same=(buf,key)=>{ if(!buf) return false; const a=new Uint8Array(buf); if(a.length!==key.length) return false; for(let i=0;i<a.length;i++) if(a[i]!==key[i]) return false; return true; };
+  let working=false;
+  const key=()=>Net.features&&Net.features.vapid;
+  async function reg(){ await navigator.serviceWorker.register('sw.js'); return navigator.serviceWorker.ready; }
+  async function current(){ try{ const r=await navigator.serviceWorker.getRegistration(); return r?await r.pushManager.getSubscription():null; }catch(e){ return null; } }
+  async function subscribe(){
+    const k=b64(key()), r=await reg();
+    let sub=await r.pushManager.getSubscription();
+    if(sub&&!same(sub.options&&sub.options.applicationServerKey,k)){ try{ await sub.unsubscribe(); }catch(e){} sub=null; }   // le serveur a changé de clé
+    if(!sub) sub=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:k});
+    await Net.call('push',{endpoint:sub.endpoint});
+    ls.set('propagation:notif','1');
+  }
+  async function off(){
+    ls.set('propagation:notif','0');
+    const sub=await current();
+    if(sub){ try{ await Net.call('unpush',{endpoint:sub.endpoint}); }catch(e){} try{ await sub.unsubscribe(); }catch(e){} }
+  }
+  async function render(msg){
+    const box=$('#notif'), st=$('#nstate'), btn=$('#nbtn');
+    if(!online||!key()){ box.hidden=true; return; }       // serveur sans notifications
+    let text, label=null, act='';
+    if(!supported){
+      text=ios&&!standalone?'Notifications : sur iPhone, ouvre le jeu dans Safari, touche Partager puis « Sur l’écran d’accueil », et lance-le depuis son icône. Le réglage apparaîtra ici.':'Ce navigateur ne gère pas les notifications.';
+    } else if(Notification.permission==='denied'){
+      text='Notifications bloquées : autorise-les pour ce site dans les réglages du navigateur.';
+    } else {
+      const sub=Notification.permission==='granted'?await current():null;
+      if(sub&&ls.get('propagation:notif')!=='0'){ text=msg||'Notifications activées sur cet appareil : tu es prévenu quand c’est ton tour.'; label='Désactiver'; act='off'; }
+      else { text=msg||'Reçois une notification quand c’est ton tour, même page fermée.'; label='Activer les notifications'; act='on'; }
+    }
+    st.textContent=text; btn.hidden=label===null; btn.disabled=working;
+    if(label!==null){ btn.textContent=label; btn.dataset.a=act; }
+    box.hidden=false;
+  }
+  async function click(){
+    if(working) return; working=true; $('#nbtn').disabled=true;
+    let msg='';
+    try{
+      if($('#nbtn').dataset.a==='off') await off();
+      else{
+        const perm=await Notification.requestPermission();
+        if(perm==='granted') await subscribe(); else if(perm==='denied') msg='';
+      }
+    }catch(e){ msg='Impossible d’activer les notifications sur cet appareil ('+(e&&e.name?e.name:'erreur')+').'; }
+    working=false; await render(msg);
+  }
+  // à chaque connexion : remet l'abonnement à jour (clé du serveur, appareil connu)
+  async function sync(){
+    if(supported&&key()&&Notification.permission==='granted'&&ls.get('propagation:notif')!=='0'){ try{ await subscribe(); }catch(e){} }
+    await render();
+  }
+  if(supported) navigator.serviceWorker.addEventListener('message',e=>{ const d=e.data||{}; if(d.t==='push'&&mode==='lobby') loadLobby(); if(d.t==='open'&&d.url){ const m=/#([A-Z0-9]{4})$/.exec(d.url); if(m&&mode!=='local'&&!(mode==='online'&&code===m[1])) joinGame(m[1],true); } });
+  $('#nbtn').addEventListener('click',click);
+  return {sync,render};
+})();
+const sendVis=()=>{ if(online) Net.call('vis',{visible:!document.hidden}).catch(()=>{}); };
+document.addEventListener('visibilitychange',sendVis);
+
 /* nouvelle partie */
 function fillSizes(){
   const [a,b,c,def]=SIZES[$('#np').value]||SIZES[2];
@@ -742,8 +820,8 @@ $('#copy').addEventListener('click',async()=>{
 fillSizes(); updateModeNote();
 $('#name').value=ls.get('propagation:name')||'';
 Net.on('state',st=>{
-  if(st==='ready'){ online=true; $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.'; busy(false); updateModeNote(); renderProfile(Net.profile); }
-  else if(st==='down'){ online=false; busy(false); $('#net').textContent='Connexion perdue, reconnexion…'; }
+  if(st==='ready'){ online=true; Notif.sync(); sendVis(); $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.'; busy(false); updateModeNote(); renderProfile(Net.profile); }
+  else if(st==='down'){ online=false; Notif.render(); busy(false); $('#net').textContent='Connexion perdue, reconnexion…'; }
   else if(st==='authfail'){ online=false; busy(false); $('#net').textContent='Compte non reconnu par le serveur. Utilise ton code de récupération.'; }
 });
 (async()=>{

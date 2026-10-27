@@ -9,6 +9,7 @@
 //   rien                                              : tout est en mémoire, perdu au redémarrage
 'use strict';
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -30,11 +31,14 @@ const GRACE_MS = Number(process.env.GRACE_MS) || 30 * 60 * 1000;      // répit 
 const DAY = 24 * 3600 * 1000;
 const TURN_CHOICES_H = [12, 24, 48, 72];
 const START_ELO = 1000, K_FACTOR = 32, MIN_ELO = 100;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'https://github.com/maxime-teixeiraricci/propagation';
+const MAX_PUSH_PER_PLAYER = 5;
 const MAX_ACTIVE_PER_PLAYER = 12, MAX_GAMES = 4000, MAX_PLAYERS = 20000;
 
 const players = new Map();   // pid -> { pid, h, name, elo, games, wins, created }
 const games = new Map();     // code -> partie
 const clients = new Set();
+const meta = new Map();      // 'vapid' -> { jwk }
 
 class Err extends Error { constructor(code) { super(code); this.code = code; } }
 const rnd = k => crypto.randomInt(k);
@@ -64,6 +68,7 @@ async function loadAll() {
       const snap = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'data.json'), 'utf8'));
       (snap.players || []).forEach(p => players.set(p.pid, p));
       (snap.games || []).forEach(g => games.set(g.code, g));
+      Object.entries(snap.meta || {}).forEach(([k, v]) => meta.set(k, v));
     } catch (e) { if (e.code !== 'ENOENT') { loadOk = false; log('lecture data.json impossible :', e.message); } }
   } else if (STORAGE === 'upstash') {
     try {
@@ -79,7 +84,7 @@ async function loadAll() {
         part.forEach((k, j) => {
           if (!vals[j]) return;
           const o = JSON.parse(vals[j]);
-          if (k.startsWith('propagation:g:')) games.set(o.code, o); else if (k.startsWith('propagation:p:')) players.set(o.pid, o);
+          if (k.startsWith('propagation:g:')) games.set(o.code, o); else if (k.startsWith('propagation:p:')) players.set(o.pid, o); else if (k.startsWith('propagation:m:')) meta.set(k.slice(14), o);
         });
       }
     } catch (e) { loadOk = false; lastSaveOk = false; lastSaveError = String(e.message || e); log('chargement Upstash impossible :', lastSaveError); }
@@ -100,11 +105,11 @@ async function flush() {
     if (STORAGE === 'file') {
       fs.mkdirSync(DATA_DIR, { recursive: true });
       const f = path.join(DATA_DIR, 'data.json');
-      fs.writeFileSync(f + '.tmp', JSON.stringify({ players: [...players.values()], games: [...games.values()] }));
+      fs.writeFileSync(f + '.tmp', JSON.stringify({ players: [...players.values()], games: [...games.values()], meta: Object.fromEntries(meta) }));
       fs.renameSync(f + '.tmp', f);
     } else {
       for (const k of batch) {
-        const id = k.slice(2), obj = k[0] === 'g' ? games.get(id) : players.get(id);
+        const id = k.slice(2), obj = k[0] === 'g' ? games.get(id) : k[0] === 'p' ? players.get(id) : meta.get(id);
         if (obj) await up(['SET', 'propagation:' + k, JSON.stringify(obj)]); else await up(['DEL', 'propagation:' + k]);
       }
     }
@@ -213,11 +218,90 @@ function summary(g, pid) {
   };
 }
 
+/* ======================= notifications (Web Push) ======================= */
+// Notification sans contenu : le navigateur reçoit un simple signal, et son service worker demande
+// ensuite au serveur (/api/due) quelles parties attendent le joueur. Pas de chiffrement de message nécessaire.
+let vapid = null;
+function ensureVapid() {
+  let m = meta.get('vapid');
+  const make = () => {
+    const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    m = { jwk: privateKey.export({ format: 'jwk' }) };
+    meta.set('vapid', m); dirty.add('m:vapid'); scheduleFlush();
+  };
+  if (!m) make();
+  let key;
+  try { key = crypto.createPrivateKey({ key: m.jwk, format: 'jwk' }); } catch (e) { make(); key = crypto.createPrivateKey({ key: m.jwk, format: 'jwk' }); }
+  const pub = Buffer.concat([Buffer.from([4]), Buffer.from(m.jwk.x, 'base64url'), Buffer.from(m.jwk.y, 'base64url')]).toString('base64url');
+  vapid = { key, pub };
+}
+const PUSH_HOST = /(^|\.)(googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com)$/;
+function pushUrlOk(s) {            // seuls les services de notification des navigateurs sont acceptés
+  if (typeof s !== 'string' || s.length > 700) return false;
+  let u; try { u = new URL(s); } catch (e) { return false; }
+  if (u.username || u.password) return false;
+  if (TEST && u.protocol === 'http:' && (u.hostname === '127.0.0.1' || u.hostname === 'localhost')) return true;
+  return u.protocol === 'https:' && !u.port && PUSH_HOST.test(u.hostname);
+}
+function webPush(endpoint, ttl) {
+  return new Promise(resolve => {
+    try {
+      const u = new URL(endpoint), exp = Math.floor(Date.now() / 1000) + 12 * 3600;
+      const b = o => Buffer.from(JSON.stringify(o)).toString('base64url');
+      const head = b({ typ: 'JWT', alg: 'ES256' }) + '.' + b({ aud: u.origin, exp, sub: VAPID_SUBJECT });
+      const sig = crypto.sign('sha256', Buffer.from(head), { key: vapid.key, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+      const req = (u.protocol === 'http:' ? http : https).request(u, {
+        method: 'POST', timeout: 10000,
+        headers: { Authorization: `vapid t=${head}.${sig}, k=${vapid.pub}`, TTL: String(ttl), Urgency: 'high', 'Content-Length': '0' }
+      }, res => { res.resume(); resolve(res.statusCode); });
+      req.on('timeout', () => req.destroy()); req.on('error', () => resolve(0)); req.end();
+    } catch (e) { resolve(0); }
+  });
+}
+async function notifyPid(pid, ttl) {
+  const p = players.get(pid);
+  if (!p || !p.push || !p.push.length || !vapid) return;
+  for (const s of [...p.push]) {
+    const st = await webPush(s.endpoint, ttl);
+    if (st === 404 || st === 410) { p.push = p.push.filter(x => x !== s); markP(pid); }
+    else if (st < 200 || st >= 300) log(`notification refusée (${st}) pour ${pid}`);
+  }
+}
+// Le joueur regarde déjà cette partie sur une page visible : inutile de le notifier.
+const playerHere = (pid, code) => { for (const c of clients) if (c.pid === pid && c.subs.has(code) && c.visible !== false) return true; return false; };
+function notifyTurn(g) {
+  if (g.status !== 'playing' || g.notifiedAt === g.turnAt) return;
+  g.notifiedAt = g.turnAt;
+  const pid = g.players[g.turn];
+  if (pid && !playerHere(pid, g.code)) notifyPid(pid, g.mode === 'long' ? 86400 : 600).catch(() => {});
+}
+function remindTurns(now) {        // partie longue : rappel quand il reste peu de temps (3 h, ou 1/4 du délai si plus court)
+  for (const g of games.values()) {
+    if (g.status !== 'playing' || g.mode !== 'long' || !g.deadline || g.remindedAt === g.turnAt) continue;
+    if (now < g.deadline - Math.min(3 * 3600 * 1000, g.turnMs / 4)) continue;
+    g.remindedAt = g.turnAt; markG(g);
+    const pid = g.players[g.turn];
+    if (pid && !playerHere(pid, g.code)) notifyPid(pid, 3600).catch(() => {});
+  }
+}
+function dueFor(endpoint) {
+  const now = Date.now();
+  if (typeof endpoint !== 'string') return [];
+  for (const p of players.values()) {
+    if (!p.push || !p.push.some(s => s.endpoint === endpoint)) continue;
+    const list = [];
+    for (const g of games.values()) if (g.status === 'playing' && g.players[g.turn] === p.pid) list.push({ code: g.code, mode: g.mode, np: g.np, left: g.deadline ? Math.max(0, g.deadline - now) : null });
+    return list.sort((a, b) => (a.left == null) - (b.left == null) || a.left - b.left);
+  }
+  return [];
+}
+
 /* ======================= connexions ======================= */
 const prof = p => ({ name: p.name, elo: p.elo, games: p.games, wins: p.wins });
 function send(c, obj) { sendRaw(c, 1, Buffer.from(JSON.stringify(obj))); }
 function pushGame(g) {
   for (const c of clients) if (c.pid && c.subs.has(g.code)) send(c, { t: 'game', code: g.code, g: viewFor(g, c.pid), now: Date.now() });
+  notifyTurn(g);
 }
 function pushProfile(pid) {
   const p = players.get(pid); if (!p) return;
@@ -237,7 +321,7 @@ const OPS = {
       players.set(pid, p); markP(pid);
     }
     c.pid = pid;
-    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H } };
+    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, vapid: vapid ? vapid.pub : null } };
   },
   name(c, m) {
     const nm = clean(m.name); if (!nm) throw new Err('invalid');
@@ -273,6 +357,7 @@ const OPS = {
     if (!g) throw new Err('not_found');
     const before = g.players.indexOf(c.pid);
     const idx = joinSeat(g, c.pid);
+    if (idx >= 0) c.subs.add(g.code);               // rejoindre = regarder la partie (évite une notification inutile)
     if (idx !== before) pushGame(g);
     return { idx };
   },
@@ -336,6 +421,23 @@ const OPS = {
     eliminate(g, g.turn); pushGame(g);
     return {};
   },
+  push(c, m) {                                    // enregistre cet appareil pour les notifications
+    const ep = m.endpoint;
+    if (!vapid || !pushUrlOk(ep)) throw new Err('invalid');
+    for (const q of players.values()) if (q.push && q.push.some(x => x.endpoint === ep) && q.pid !== c.pid) { q.push = q.push.filter(x => x.endpoint !== ep); markP(q.pid); }
+    const p = players.get(c.pid);
+    p.push = (p.push || []).filter(x => x.endpoint !== ep);
+    p.push.push({ endpoint: ep, added: Date.now() });
+    if (p.push.length > MAX_PUSH_PER_PLAYER) p.push = p.push.slice(-MAX_PUSH_PER_PLAYER);
+    markP(p.pid);
+    return {};
+  },
+  unpush(c, m) {
+    const p = players.get(c.pid);
+    if (p.push) { p.push = p.push.filter(x => x.endpoint !== m.endpoint); markP(p.pid); }
+    return {};
+  },
+  vis(c, m) { c.visible = m.visible !== false; return {}; },
   mygames(c) {
     const now = Date.now(), list = [];
     for (const g of games.values()) {
@@ -375,6 +477,7 @@ function handle(c, raw, limited) {
 /* ======================= délais et entretien ======================= */
 function tick() {
   const now = Date.now();
+  remindTurns(now);
   for (const g of [...games.values()]) {
     if (g.status === 'playing' && g.mode === 'long' && g.deadline && now > g.deadline) {
       log(`délai dépassé : partie ${g.code}, place ${g.turn} éliminée`);
@@ -393,7 +496,12 @@ function applyGrace() {   // après un redémarrage (ou un réveil), chacun gard
 /* ======================= HTTP + WebSocket ======================= */
 const FILES = {
   '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'],
-  '/engine.js': ['engine.js', 'text/javascript; charset=utf-8']
+  '/engine.js': ['engine.js', 'text/javascript; charset=utf-8'],
+  '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
+  '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'],
+  '/icon.svg': ['icon.svg', 'image/svg+xml'],
+  '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png'],
+  '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png']
 };
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
@@ -401,6 +509,15 @@ const server = http.createServer((req, res) => {
     fs.readFile(path.join(__dirname, FILES[url][0]), (err, buf) => {
       if (err) { res.writeHead(500); res.end('Fichier introuvable'); return; }
       res.writeHead(200, { 'content-type': FILES[url][1], 'cache-control': 'no-cache' }); res.end(buf);
+    });
+  } else if (url === '/api/due' && req.method === 'POST') {
+    let body = '', big = false;
+    req.on('data', d => { body += d; if (body.length > 2000) { big = true; req.destroy(); } });
+    req.on('end', () => {
+      if (big) return;
+      let ep = ''; try { ep = JSON.parse(body).endpoint; } catch (e) {}
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ games: dueFor(ep) }));
     });
   } else if (url === '/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -466,6 +583,7 @@ function parse(c) {
 /* ======================= démarrage ======================= */
 async function main() {
   await loadAll();
+  ensureVapid();
   applyGrace();
   setInterval(() => { for (const c of clients) sendRaw(c, 9, Buffer.alloc(0)); }, 25000).unref();
   setInterval(tick, TEST ? 200 : 30000).unref();
