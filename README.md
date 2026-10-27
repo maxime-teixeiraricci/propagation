@@ -4,6 +4,10 @@ Jeu de grille de 2 à 8 joueurs. Chacun place des points sur ses cases ; à 4 po
 
 Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `bot.js` (les joueurs IA), `index.html` (le jeu), `sw.js` + `manifest.webmanifest` + icônes (notifications et installation sur l'écran d'accueil), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
 
+## Ordinateur et téléphone
+
+La même page s'adapte à l'écran. Sur ordinateur (fenêtre assez large), l'accueil passe sur deux colonnes (ton compte et tes parties à gauche, nouvelle partie et code à droite), et en partie la grille occupe la hauteur de l'écran avec les joueurs, le statut et les boutons à droite. Sur téléphone, tout reste en une colonne. Rien à installer.
+
 ## Modes
 
 - 2, 4, 6 ou 8 joueurs, chacun pour soi. Chaque joueur a une couleur et une forme de point.

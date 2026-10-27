@@ -186,11 +186,28 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
 .seat select{width:auto; padding:6px 8px; font-size:14px}
 .tb{display:inline-block; font:600 11px var(--mono); border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--muted); margin-left:6px; vertical-align:1px}
 .pl .tb{margin-left:0}
-.cfg{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px}
+.cfg{display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:10px}
 .cfg label{flex:none}
 .share{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 .share .code{font:500 34px/1 var(--mono); letter-spacing:.2em; margin-right:2px}
 .foot{display:flex; gap:10px; flex-wrap:wrap}
+/* ordinateur : deux colonnes */
+.lcol,.ginfo{display:contents}
+@media (min-width:960px){
+  .app{max-width:1180px}
+  #lobby{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px 24px; align-items:start}
+  .lcol{display:flex; flex-direction:column; gap:12px; min-width:0}
+  #lobby > details{grid-column:1 / -1}
+  #game{--bw:min(calc(100vw - 440px), max(380px, calc(100vh - 150px))); display:grid; grid-template-columns:var(--bw) 360px; justify-content:center; grid-template-rows:auto 1fr; column-gap:28px; row-gap:14px; align-items:start}
+  .ginfo{display:flex; flex-direction:column; gap:12px; grid-column:2; grid-row:1; min-width:0}
+  #game > .foot{grid-column:2; grid-row:2}
+  #game > .board{grid-column:1; grid-row:1 / span 2; width:100%}
+  #game .players{grid-template-columns:1fr}
+  #game:has(> .board[hidden]){grid-template-columns:minmax(0,680px); justify-content:start}
+  #game:has(> .board[hidden]) .ginfo,#game:has(> .board[hidden]) > .foot{grid-column:1}
+  .cell.can{cursor:pointer}
+}
+
 .toast{margin:0; min-height:1.4em; font-size:14px; color:var(--danger)}
 </style>
 </head>
@@ -202,6 +219,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
   </header>
 
   <section id="lobby" class="stack">
+    <div class="lcol">
     <div class="card stack">
       <h2>Mon compte</h2>
       <div class="me">
@@ -236,7 +254,9 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       <h2>Mes parties</h2>
       <div class="games" id="games"><p class="note">Connexion…</p></div>
     </div>
+    </div>
 
+    <div class="lcol">
     <div class="card stack">
       <h2>Nouvelle partie</h2>
       <div class="row">
@@ -277,6 +297,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       </div>
       <p class="note err" id="lobby-err"></p>
     </div>
+    </div>
 
     <details id="topbox">
       <summary>Classement</summary>
@@ -298,6 +319,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
   </section>
 
   <section id="game" class="stack" hidden>
+    <div class="ginfo">
     <div class="players" id="players"></div>
     <p class="status" id="status" aria-live="polite"></p>
     <p class="timer" id="timer" hidden></p>
@@ -322,6 +344,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       </div>
       <div class="row"><button class="btn" id="startnow" hidden>Lancer la partie</button></div>
       <p class="note" id="roomhint"></p>
+    </div>
     </div>
     <div class="board" id="board" data-turn="0"></div>
     <div class="foot">
