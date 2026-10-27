@@ -283,7 +283,7 @@ function viewFor(g, pid) {
   return {
     code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status,
     o: g.o, c: g.c, turn: g.turn, seq: g.seq, last: g.last, winner: g.winner,
-    teams: g.teams || 0, host: g.players.indexOf(hostOf(g)), sudden: !!g.sudden, dead: g.dead || 0, round: g.round || 0,
+    teams: g.teams || 0, host: g.players.indexOf(hostOf(g)), sudden: !!g.sudden, dead: g.dead || 0, round: g.round || 0, public: !!g.public,
     seats: g.players.map((p, x) => { const w = who(p); return { filled: !!p, name: w ? w.name : '', rating: w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1 }; }),
     me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result
   };
@@ -438,7 +438,7 @@ const OPS = {
     const b = E.newBoard(n, np, rnd(np)), now = Date.now();
     const g = { code, n, np, mode, turnMs, ranked: m.ranked !== false, status: 'waiting', players: new Array(np).fill(null),
       o: b.o, c: b.c, turn: rnd(np), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0,
-      sudden: np > 4 && !!m.sudden, dead: 0, round: 0 };
+      sudden: np > 4 && !!m.sudden, dead: 0, round: 0, public: !ai && m.public !== false };
     g.players[0] = c.pid;
     if (ai) { g.ai = ai; for (let k = 1; k < np; k++) g.players[k] = `bot:${ai}:${k}`; startPlaying(g); }
     games.set(code, g); markG(g);
@@ -522,6 +522,7 @@ const OPS = {
     }
     if (m.ranked !== undefined) g.ranked = !!m.ranked;
     if (m.sudden !== undefined) g.sudden = !!m.sudden;
+    if (m.public !== undefined) g.public = !!m.public;
     if (g.np <= 4) g.sudden = false;                  // la mort subite n'existe qu'à 6 et 8 joueurs
     g.updated = Date.now(); markG(g); pushGame(g);
     return {};
@@ -626,6 +627,20 @@ const OPS = {
     const mine = x => (x.status === 'playing' && x.turn === x.me ? 1 : 0);
     list.sort((x, y) => mine(y) - mine(x) || y.updated - x.updated);
     return { games: list.slice(0, 40), profile: prof(players.get(c.pid)), now };
+  },
+  rooms(c) {                                      // salles d'attente publiques où il reste une place
+    const now = Date.now(), list = [];
+    for (const g of games.values()) {
+      if (g.status !== 'waiting' || !g.public || g.players.includes(c.pid)) continue;
+      if (!g.players.some(p => !p || isBot(p))) continue;
+      const host = hostOf(g), hw = who(host); if (!hw) continue;
+      const here = [...clients].some(cl => cl.pid === host && cl.subs.has(g.code));
+      if (g.mode === 'long' ? now - g.updated > 2 * DAY : !here) continue;      // en direct : le créateur doit être dans la salle
+      list.push({ code: g.code, host: hw.name, hostElo: hw.elo, filled: g.players.filter(Boolean).length, np: g.np, n: g.n,
+        mode: g.mode, hours: g.turnMs ? Math.round(g.turnMs / 3600000) : 0, teams: g.teams || 0, ranked: !!g.ranked, sudden: !!g.sudden, updated: g.updated });
+    }
+    list.sort((x, y) => y.updated - x.updated);
+    return { rooms: list.slice(0, 20) };
   },
   top(c) {
     const all = [...players.values()].filter(p => p.games > 0).sort((a, b) => b.elo - a.elo || b.games - a.games);

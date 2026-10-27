@@ -6,7 +6,10 @@
   function ring(n, i) { const x = i % n, y = (i - x) / n; return Math.min(x, y, n - 1 - x, n - 1 - y); }
   // Mort subite : nombre maximal d'anneaux qui peuvent disparaître (il reste toujours un carré de 2×2 ou 3×3 au centre).
   const maxDead = n => Math.max(0, Math.floor((n - 2) / 2));
-  const SUDDEN_ROUNDS = 5;     // la bordure disparaît tous les 5 tours
+  const SUDDEN_START = 30;     // mort subite : la première bordure disparaît au 30e tour...
+  const SUDDEN_EVERY = 5;      // ...puis une autre tous les 5 tours
+  // Nombre de tours avant le prochain rétrécissement (round : tours déjà terminés).
+  const suddenLeft = round => (round < SUDDEN_START ? SUDDEN_START - round : SUDDEN_EVERY - ((round - SUDDEN_START) % SUDDEN_EVERY));
 
   // dead (facultatif) : nombre d'anneaux disparus. Les cases disparues n'existent plus : les points qui y vont sont perdus.
   function neighbors(n, i, dead) {
@@ -101,7 +104,7 @@
 
   // Un coup avec la règle de mort subite. board : { n, o, c, np, dead }. round : tours déjà terminés.
   // Un tour se termine quand on repasse par le premier siège (le jeu revient à un siège de numéro inférieur ou égal).
-  // Tous les 5 tours terminés, la bordure encore en place disparaît.
+  // À partir du 30e tour terminé, puis tous les 5 tours, la bordure encore en place disparaît.
   function step(board, i, p, team, sudden, round) {
     round = round || 0;
     let r = simulate(board, i, p, team);
@@ -109,7 +112,7 @@
     const wrapped = nextTurn(r.o, r.c, p, board.np) <= p;
     if (wrapped) round++;
     const dead = board.dead || 0;
-    if (wrapped && round % SUDDEN_ROUNDS === 0 && dead < maxDead(board.n)) r = simulate(Object.assign({}, board, { shrinkTo: dead + 1 }), i, p, team);
+    if (wrapped && round >= SUDDEN_START && (round - SUDDEN_START) % SUDDEN_EVERY === 0 && dead < maxDead(board.n)) r = simulate(Object.assign({}, board, { shrinkTo: dead + 1 }), i, p, team);
     r.round = round;
     return r;
   }
@@ -162,7 +165,7 @@
     return d.map(Math.round);
   }
 
-  const api = { neighbors, ring, maxDead, SUDDEN_ROUNDS, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
+  const api = { neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Engine = api;
 })(typeof window !== 'undefined' ? window : this);

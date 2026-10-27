@@ -90,6 +90,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
 
 /* mes parties */
 .games{display:flex; flex-direction:column; gap:8px}
+h3.sub{font:600 15px/1.2 var(--display); margin:6px 0 0}
 .gitem{
   display:flex; align-items:center; gap:12px; text-align:left; width:100%; font:inherit; color:inherit; cursor:pointer;
   background:var(--cell); border:1.5px solid var(--line); border-radius:9px; padding:10px 12px;
@@ -286,7 +287,8 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       </div>
       <p class="note" id="modenote"></p>
       <label class="check" for="ranked"><input type="checkbox" id="ranked" checked> Partie classée (compte pour l’Élo)</label>
-      <label class="check" for="sudden" id="suddenbox" hidden><input type="checkbox" id="sudden"> Mort subite : tous les 5 tours, le bord de la grille disparaît</label>
+      <label class="check" for="public" id="publicbox"><input type="checkbox" id="public" checked> Salle publique : visible dans la liste des salles ouvertes</label>
+      <label class="check" for="sudden" id="suddenbox" hidden><input type="checkbox" id="sudden"> Mort subite : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours</label>
       <p class="note" id="net">Connexion au jeu en ligne…</p>
       <div class="row">
         <button class="btn" id="create" disabled>Créer une partie en ligne</button>
@@ -302,6 +304,8 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
         <button class="btn ghost" id="join" disabled>Rejoindre</button>
       </div>
       <p class="note err" id="lobby-err"></p>
+      <h3 class="sub">Salles ouvertes</h3>
+      <div class="games" id="rooms"><p class="note">Recherche…</p></div>
     </div>
     </div>
 
@@ -315,7 +319,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       <ol>
         <li>Chaque joueur commence avec un point sur une case, de 2 à 8 joueurs. Les départs sont placés pour que chacun ait la même surface autour de lui ; la place de chacun et le premier joueur sont tirés au sort à chaque partie.</li>
         <li>À ton tour, tu ajoutes un point sur une de tes cases.</li>
-        <li>Option « mort subite » (à 6 et 8 joueurs) : tous les 5 tours (un tour = chaque joueur a joué une fois), la bordure de la grille disparaît. Les points qui s’y trouvent sont détruits, les cases ne peuvent plus être jouées et les débordements qui y arrivent sont perdus. Un joueur qui n’a plus de case est éliminé. Il reste toujours un carré au centre.</li>
+        <li>Option « mort subite » (à 6 et 8 joueurs) : à partir du 30e tour (un tour = chaque joueur a joué une fois), puis tous les 5 tours, la bordure de la grille disparaît. Les points qui s’y trouvent sont détruits, les cases ne peuvent plus être jouées et les débordements qui y arrivent sont perdus. Un joueur qui n’a plus de case est éliminé. Il reste toujours un carré au centre.</li>
         <li>Une case qui atteint 4 points déborde : elle perd 4 points et en envoie un sur chacune de ses 4 voisines, qui passent de ton côté. Le seuil est 4 partout, y compris sur un bord ou dans un coin. Les points qui sortent de la grille sont perdus.</li>
         <li>Les débordements s’enchaînent tant qu’une case atteint 4 points.</li>
         <li>Un joueur qui n’a plus aucune case est éliminé et son tour est sauté. Le dernier joueur qui a encore des cases gagne.</li>
@@ -345,7 +349,8 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
         <label for="r-hours" id="r-hoursbox">Temps par coup<select id="r-hours"><option value="12">12 heures</option><option value="24">24 heures</option><option value="48">48 heures</option><option value="72">72 heures</option></select></label>
       </div>
       <label class="check" for="r-ranked"><input type="checkbox" id="r-ranked"> Partie classée (compte pour l’Élo)</label>
-      <label class="check" for="r-sudden" id="r-suddenbox" hidden><input type="checkbox" id="r-sudden"> Mort subite : tous les 5 tours, le bord de la grille disparaît</label>
+      <label class="check" for="r-public"><input type="checkbox" id="r-public"> Salle publique : visible dans la liste des salles ouvertes</label>
+      <label class="check" for="r-sudden" id="r-suddenbox" hidden><input type="checkbox" id="r-sudden"> Mort subite : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours</label>
       <div class="seats" id="seats"></div>
       <div class="row" id="hostbar">
         <label for="r-fill">Compléter avec des IA<select id="r-fill"></select></label>
@@ -371,7 +376,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
 <script src="engine.js"></script>
 <script>
 (()=>{
-const {newBoard,simulate,step,nextTurn,tally,SIZES,ring,maxDead,SUDDEN_ROUNDS}=window.Engine;
+const {newBoard,simulate,step,nextTurn,tally,SIZES,ring,maxDead,SUDDEN_EVERY,suddenLeft}=window.Engine;
 const LETTERS='ABCD';
 const $=s=>document.querySelector(s);
 const NAMES=['Bleu','Orange','Vert','Rose','Rouge','Cyan','Violet','Gris'];
@@ -530,8 +535,8 @@ function playFrames(frames,done){
 function setView(v){
   if(v.seq!==view.seq||v.turn!==view.turn) turnSince=now();
   if(view.o&&(v.dead||0)>(view.dead||0)) toast('Mort subite : le bord de la grille a disparu !');
-  const left=SUDDEN_ROUNDS-((v.round||0)%SUDDEN_ROUNDS);
-  sdOn=!!v.sudden&&v.winner<0&&(v.dead||0)<maxDead(v.n||n); sdSoon=left<=1;
+  const left=suddenLeft(v.round||0);
+  sdOn=!!v.sudden&&v.winner<0&&(v.dead||0)<maxDead(v.n||n)&&left<=SUDDEN_EVERY; sdSoon=left<=1;      // l'anneau n'est signalé que dans les 5 derniers tours
   view=v; paint(v,[]); renderMeta();
 }
 function resetView(){ view={seq:-1,o:null,c:null,turn:0,winner:-1}; sdOn=false; }
@@ -612,9 +617,9 @@ function renderMeta(){
   $('#status').textContent=s;
   const sn=$('#sdnote');
   if(view.sudden&&!waiting&&!over){
-    const dd=view.dead||0, left=SUDDEN_ROUNDS-((view.round||0)%SUDDEN_ROUNDS);
+    const dd=view.dead||0, rd=view.round||0, left=suddenLeft(rd), pl=left>1?'s':'';
     sn.hidden=false; sn.classList.toggle('soon',dd<maxDead(n)&&left<=1);
-    sn.textContent=dd>=maxDead(n)?'Mort subite : la grille ne peut plus rétrécir.':`Mort subite : le bord disparaît dans ${left} tour${left>1?'s':''}.`;
+    sn.textContent=dd>=maxDead(n)?'Mort subite : la grille ne peut plus rétrécir.':rd<30?`Mort subite : le bord commence à disparaître dans ${left} tour${pl} (tour ${rd+1}).`:`Mort subite : le bord disparaît dans ${left} tour${pl}.`;
   } else sn.hidden=true;
   $('#room').hidden=!waiting; $('#players').hidden=waiting; boardEl.hidden=waiting;
   $('#leaveroom').hidden=!(waiting&&me>=0);
@@ -703,7 +708,7 @@ async function createGame(){
   $('#create-err').textContent=''; busy(true);
   try{
     const o={np:+$('#np').value||2,n:+$('#size').value,mode:$('#mode').value,hours:+$('#hours').value,ranked:$('#ranked').checked};
-    o.sudden=o.np>4&&$('#sudden').checked;
+    o.sudden=o.np>4&&$('#sudden').checked; o.public=$('#public').checked;
     if($('#opp').value==='ai') o.ai={level:+$('#level').value||3};
     if(window.__TURN_MS) o.turnMs=window.__TURN_MS;   // essais uniquement
     const r=await Net.call('create',o);
@@ -748,6 +753,7 @@ function renderRoom(){
   set('#r-hours',Math.round((d.turnMs||24*3600000)/3600000));
   $('#r-hoursbox').hidden=d.mode!=='long';
   const rk=$('#r-ranked'); rk.checked=!!d.ranked; rk.disabled=!host;
+  const pb=$('#r-public'); pb.checked=!!d.public; pb.disabled=!host;
   const sd=$('#r-sudden'); $('#r-suddenbox').hidden=d.np<=4; sd.checked=!!d.sudden; sd.disabled=!host;
   const free=d.seats.filter(s=>!s.filled).length, joined=d.np-free, humans=d.seats.filter(s=>s.filled&&!s.bot).length;
   $('#roomnote').textContent=host
@@ -802,6 +808,7 @@ $('#r-mode').addEventListener('change',e=>cfgCall({mode:e.target.value,hours:+$(
 $('#r-hours').addEventListener('change',e=>cfgCall({mode:'long',hours:+e.target.value}));
 $('#r-ranked').addEventListener('change',e=>cfgCall({ranked:e.target.checked}));
 $('#r-sudden').addEventListener('change',e=>cfgCall({sudden:e.target.checked}));
+$('#r-public').addEventListener('change',e=>cfgCall({public:e.target.checked}));
 $('#r-fillgo').addEventListener('click',async()=>{ try{ await Net.call('fill',{code,level:+$('#r-fill').value}); }catch(e){ toast(errMsg(e)); } });
 $('#leaveroom').addEventListener('click',async()=>{ try{ await Net.call('leave',{code}); }catch(e){ toast(errMsg(e)); return; } leave(); });
 
@@ -863,8 +870,28 @@ async function loadLobby(){
   try{
     const r=await Net.call('mygames'); renderProfile(r.profile); renderGames(r.games,r.now-Date.now());
   }catch(e){ if(e.code!=='unavailable') toast(errMsg(e)); }
-  loadTop();
+  loadTop(); loadRooms();
 }
+function renderRooms(list){
+  const box=$('#rooms'); box.textContent='';
+  if(!list.length){ const p=document.createElement('p'); p.className='note'; p.textContent='Aucune salle ouverte pour le moment. Crée la tienne : elle apparaîtra ici pour les autres joueurs.'; box.append(p); return; }
+  for(const r of list){
+    const b=document.createElement('button'); b.className='gitem'; b.style.setProperty('--pc','var(--p0)');
+    b.innerHTML='<span class="sw" data-sh="0"></span><span class="gi"><span class="g1"></span><span class="g2"></span></span>';
+    b.querySelector('.g1').textContent=`${r.host} (Élo ${r.hostElo}) · ${r.filled}/${r.np} joueurs`;
+    const bits=[`${r.n}×${r.n}`, r.mode==='long'?`longue durée, ${fmtTurn(r.hours*3600000)} par coup`:'rapide', r.ranked?'classée':'amicale'];
+    if(r.teams) bits.push(`${r.teams} équipes`);
+    if(r.sudden) bits.push('mort subite');
+    b.querySelector('.g2').textContent=`Salle ${r.code} · ${bits.join(' · ')}`;
+    b.addEventListener('click',()=>joinGame(r.code,false));
+    box.append(b);
+  }
+}
+async function loadRooms(){
+  if(!online||mode!=='lobby'||document.hidden) return;
+  try{ renderRooms((await Net.call('rooms')).rooms); }catch(e){}
+}
+setInterval(loadRooms,8000);
 async function loadTop(){
   if(!online||$('#topbox').open===false) return;
   try{
@@ -989,7 +1016,7 @@ function fillLevels(){
 }
 function updateModeNote(){
   const ai=$('#opp').value==='ai', long=$('#mode').value==='long';
-  $('#levelbox').hidden=!ai; $('#moderow').hidden=ai; $('#hoursbox').hidden=!long;
+  $('#levelbox').hidden=!ai; $('#moderow').hidden=ai; $('#hoursbox').hidden=!long; $('#publicbox').hidden=ai;
   $('#create').textContent=ai?'Jouer contre l’IA':'Créer une salle';
   let t;
   if(ai) t='Tu joues tout de suite, sans attendre personne, et tu peux fermer la page : la partie reste dans « Mes parties ». Chaque niveau d’IA a un Élo fixe : battre un niveau plus fort que toi rapporte plus, et un niveau bien plus faible presque rien. ';
