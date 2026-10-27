@@ -10,6 +10,7 @@ Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles
 - **Rapide** : tout le monde est connecté. Si quelqu'un ne joue plus pendant 45 secondes, les autres peuvent l'éliminer.
 - **Longue durée** : chaque joueur a 12, 24, 48 ou 72 heures par coup. On peut fermer la page entre deux coups. Un joueur qui dépasse son délai est éliminé.
 - Départs équitables : à 2, 4 et 8 joueurs, les départs sont symétriques ; à 6 joueurs, chacun a la même surface à une case près. La place de chacun et le premier joueur sont tirés au sort.
+- Pendant la partie, les joueurs sont classés par nombre de points (numéro à gauche de chaque carte ; à égalité, même rang). En équipe, le classement est celui des équipes. Les joueurs éliminés passent en dernier ; à la fin, l'ordre final de la partie.
 - « Abandonner » est possible à tout moment, « Revanche » relance avec les mêmes joueurs (et les mêmes équipes et IA).
 
 ## Compte, parties et Élo

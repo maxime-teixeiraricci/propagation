@@ -118,6 +118,8 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
 .pl.out .nm{text-decoration:line-through}
 .pl.empty{border-style:dashed}
 .pl.empty .sw{opacity:.35}
+.pl .rk{font:600 13px var(--mono); color:var(--muted); min-width:1.1ch; text-align:center; flex:none}
+.pl .rk:empty{display:none}
 .pl .sw{width:16px; height:16px; background:var(--pc); flex:none; border-radius:50%}
 .pl .who{min-width:0; display:flex; flex-direction:column; flex:1}
 .pl .top1{display:flex; gap:6px; align-items:baseline; min-width:0}
@@ -515,6 +517,32 @@ function renderMeta(){
   const waiting=isOnline&&remote.status==='waiting';
   const joined=isOnline?remote.seats.filter(s=>s.filled).length:np;
   const showRating=isOnline&&(remote.ranked||remote.ai>0);
+  // Classement affiché : par nombre de points (par équipe s'il y a des équipes) ; les éliminés ferment la marche.
+  // Partie terminée : l'ordre final de la partie.
+  const T0=isOnline?remote.teams:0;
+  const filled=i=>!isOnline||remote.seats[i].filled;
+  const alive=i=>filled(i)&&t[i].cells>0;
+  const key=i=>T0?i%T0:i;
+  const grp=new Map();
+  for(let i=0;i<np;i++) if(alive(i)) grp.set(key(i),(grp.get(key(i))||0)+t[i].points);
+  const fin=over&&isOnline&&remote.result&&remote.result.ranks;
+  const idx=[...Array(np).keys()];
+  idx.sort((a,b)=>{
+    if(waiting) return a-b;
+    if(fin&&fin[a]!==fin[b]) return fin[a]-fin[b];
+    const aa=alive(a), ab=alive(b);
+    if(aa!==ab) return aa?-1:1;
+    if(aa){ const ga=grp.get(key(a)), gb=grp.get(key(b)); if(ga!==gb) return gb-ga; if(key(a)!==key(b)) return key(a)-key(b); if(t[a].points!==t[b].points) return t[b].points-t[a].points; }
+    return a-b;
+  });
+  const pos=[]; idx.forEach((s,k)=>{pos[s]=k;});
+  const rank=i=>{
+    if(waiting||!filled(i)) return '';
+    if(fin) return fin[i];
+    if(!alive(i)) return '';
+    let r=1; for(const v of grp.values()) if(v>grp.get(key(i))) r++;
+    return r;
+  };
   let h='';
   for(let i=0;i<np;i++){
     const seat=!isOnline||remote.seats[i].filled;
@@ -522,7 +550,7 @@ function renderMeta(){
     const active=!over&&!waiting&&view.turn===i;
     const st=!seat?'place libre':out?'éliminé':`${t[i].cells} case${t[i].cells>1?'s':''} · ${t[i].points} pt${t[i].points>1?'s':''}`;
     const T=isOnline?remote.teams:0;
-    h+=`<div class="pl${active?' active':''}${out?' out':''}${seat?'':' empty'}" style="--pc:var(--p${i});order:${T?(i%T)*10+i:i}"><span class="sw" data-sh="${i}"></span><div class="who"><div class="top1"><span class="nm"></span><span class="rt"></span></div><span class="st">${st}${T?` · <span class="tb">Équipe ${LETTERS[i%T]}</span>`:''}</span></div></div>`;
+    h+=`<div class="pl${active?' active':''}${out?' out':''}${seat?'':' empty'}" style="--pc:var(--p${i});order:${pos[i]}"><span class="rk">${rank(i)}</span><span class="sw" data-sh="${i}"></span><div class="who"><div class="top1"><span class="nm"></span><span class="rt"></span></div><span class="st">${st}${T?` · <span class="tb">Équipe ${LETTERS[i%T]}</span>`:''}</span></div></div>`;
   }
   $('#players').innerHTML=h;
   [...$('#players').children].forEach((el,i)=>{
