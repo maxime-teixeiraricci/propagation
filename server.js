@@ -129,6 +129,9 @@ const durable = () => (STORAGE === 'upstash' || STORAGE === 'file') && loadOk &&
 /* ======================= parties ======================= */
 const cellsOf = (g, s) => { let k = 0; for (let i = 0; i < g.c.length; i++) if (g.c[i] > 0 && g.o[i] === s) k++; return k; };
 const aliveSeats = g => { const r = []; for (let s = 0; s < g.np; s++) if (g.players[s] && cellsOf(g, s) > 0) r.push(s); return r; };
+const teamOf = (g, s) => (g.teams ? s % g.teams : s);
+const teamArr = g => (g.teams ? Array.from({ length: g.np }, (_, s) => s % g.teams) : null);
+const hostOf = g => (g.host && g.players.includes(g.host) ? g.host : g.players.find(p => p && !isBot(p)) || null);
 function startTurnClock(g) {
   g.turnAt = Date.now();
   g.deadline = g.mode === 'long' ? g.turnAt + g.turnMs : null;
@@ -140,21 +143,40 @@ function updateElim(g) {
   for (let s = 0; s < g.np; s++) if (g.players[s] && !done.has(s) && cellsOf(g, s) === 0) grp.push(s);
   if (grp.length) g.elim.push(grp);
 }
+// Rang de chaque équipe : une équipe est battue quand son dernier joueur est éliminé ; celle qui reste est première.
+function teamRanks(g) {
+  const idx = new Map(); g.elim.forEach((grp, gi) => grp.forEach(x => idx.set(x, gi)));
+  const key = [];
+  for (let t = 0; t < g.teams; t++) {
+    let k = -1, alive = false;
+    for (let x = t; x < g.np; x += g.teams) { if (idx.has(x)) k = Math.max(k, idx.get(x)); else alive = true; }
+    key.push(alive ? Infinity : k);
+  }
+  return key.map(k => 1 + key.filter(o => o > k).length);
+}
 function finish(g) {
   if (g.status === 'done') return;
   g.status = 'done'; g.deadline = null;
-  const ranks = E.ranksFrom(g.np, g.winner, g.elim);
+  const T = g.teams || 0;
+  const tr = T ? teamRanks(g) : null;
+  const ranks = T ? Array.from({ length: g.np }, (_, x) => tr[x % T]) : E.ranksFrom(g.np, g.winner, g.elim);
   const res = { ranks, ranked: false, before: null, after: null, delta: null };
   if (g.ranked && g.np >= 2 && g.players.every(Boolean) && new Set(g.players).size === g.np) {
     const ws = g.players.map(who);
     if (ws.every(Boolean) && ws.some(x => !x.bot)) {
-      const before = ws.map(x => x.elo), delta = E.eloDeltas(before, ranks, K_FACTOR);
+      const before = ws.map(x => x.elo);
+      let delta;
+      if (T) {                                   // par équipes : Élo moyen de chaque équipe, même variation pour tous ses joueurs
+        const avg = Array.from({ length: T }, (_, t) => { const m = before.filter((_, x) => x % T === t); return m.reduce((a, b) => a + b, 0) / m.length; });
+        const d = E.eloDeltas(avg, tr, K_FACTOR);
+        delta = before.map((_, x) => d[x % T]);
+      } else delta = E.eloDeltas(before, ranks, K_FACTOR);
       const after = before.slice();
       ws.forEach((x, i) => {                    // les IA gardent leur Élo fixe ; seuls les humains bougent
         if (x.bot) return;
         const p = x.p;
         p.elo = Math.max(MIN_ELO, before[i] + delta[i]); p.games++;
-        if (g.winner === i) p.wins++;
+        if (T ? tr[i % T] === 1 : g.winner === i) p.wins++;
         after[i] = p.elo; markP(p.pid);
       });
       res.ranked = true; res.before = before; res.after = after; res.delta = after.map((a, i) => a - before[i]);
@@ -188,7 +210,7 @@ function runBot(code, seq) {
   if (!g || g.status !== 'playing' || g.seq !== seq || !isBot(g.players[g.turn])) return;
   try {
     const seat = g.turn;
-    let i = Bot.choose(botLevel(g.players[seat]), { n: g.n, o: g.o, c: g.c }, seat, g.np);
+    let i = Bot.choose(botLevel(g.players[seat]), { n: g.n, o: g.o, c: g.c }, seat, g.np, Math.random, null, g.teams || 0);
     if (!(Number.isInteger(i) && i >= 0 && i < g.c.length && g.o[i] === seat && g.c[i] > 0)) {    // garde-fou : coup toujours légal
       const own = []; for (let k = 0; k < g.c.length; k++) if (g.o[k] === seat && g.c[k] > 0) own.push(k);
       if (!own.length) return;
@@ -203,15 +225,18 @@ function settle(g, opt) {
   updateElim(g);
   const alive = aliveSeats(g);
   g.seq++; g.updated = Date.now();
-  const botsOnly = g.players.some(isBot) && alive.length > 1 && !alive.some(s => !isBot(g.players[s]));
-  if (alive.length <= 1) {
-    g.winner = alive.length === 1 ? alive[0] : -1;
+  const aliveTeams = new Set(alive.map(x => teamOf(g, x)));
+  const botsOnly = g.players.some(isBot) && aliveTeams.size > 1 && !alive.some(x => !isBot(g.players[x]));
+  if (aliveTeams.size <= 1) {
+    g.winner = alive.length ? alive[0] : -1;
     if (g.winner >= 0) g.turn = g.winner;
     finish(g);
-  } else if (botsOnly) {                       // plus aucun humain en jeu : la partie s'arrête, les IA restantes sont départagées au score
-    const val = s => { let v = 0; for (let k = 0; k < g.c.length; k++) if (g.o[k] === s && g.c[k] > 0) v += 3 + g.c[k]; return v; };
-    const win = alive.reduce((a, b) => (val(b) > val(a) ? b : a));
-    g.elim.push(alive.filter(s => s !== win));
+  } else if (botsOnly) {                       // plus aucun humain en jeu : la partie s'arrête, les équipes (ou IA) restantes sont départagées au score
+    const val = x => { let v = 0; for (let k = 0; k < g.c.length; k++) if (g.o[k] === x && g.c[k] > 0) v += 3 + g.c[k]; return v; };
+    const tv = new Map(); alive.forEach(x => tv.set(teamOf(g, x), (tv.get(teamOf(g, x)) || 0) + val(x)));
+    const bestTeam = [...tv].reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+    const win = alive.find(x => teamOf(g, x) === bestTeam);
+    g.elim.push(alive.filter(x => teamOf(g, x) !== bestTeam));
     g.winner = win; g.turn = win;
     finish(g);
   } else if (opt.advance) {
@@ -224,7 +249,7 @@ function settle(g, opt) {
   markG(g);
 }
 function applyMove(g, seat, i) {
-  const r = E.simulate({ n: g.n, o: g.o, c: g.c }, i, seat);
+  const r = E.simulate({ n: g.n, o: g.o, c: g.c }, i, seat, teamArr(g));
   g.o = r.o; g.c = r.c; g.last = { i, p: seat };
   g.botWait = Math.min(6000, 450 + 380 * (r.frames.length - 1));      // durée de l'animation chez le joueur
   settle(g, { from: seat, advance: true });
@@ -243,10 +268,10 @@ function joinSeat(g, pid) {
   if (idx >= 0) return idx;
   if (g.status !== 'waiting') return -1;
   idx = g.players.indexOf(null);
+  if (idx < 0) for (let k = g.players.length - 1; k >= 0; k--) if (isBot(g.players[k])) { idx = k; break; }   // une place tenue par une IA est cédée
   if (idx < 0) return -1;
   if (activeCount(pid) >= MAX_ACTIVE_PER_PLAYER) throw new Err('too_many');
   g.players[idx] = pid; g.updated = Date.now();
-  if (!g.players.includes(null)) startPlaying(g);
   markG(g);
   return idx;
 }
@@ -256,7 +281,8 @@ function viewFor(g, pid) {
   return {
     code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status,
     o: g.o, c: g.c, turn: g.turn, seq: g.seq, last: g.last, winner: g.winner,
-    seats: g.players.map(p => { const w = who(p); return { filled: !!p, name: w ? w.name : '', rating: w ? w.elo : null, bot: !!(w && w.bot) }; }),
+    teams: g.teams || 0, host: g.players.indexOf(hostOf(g)),
+    seats: g.players.map((p, x) => { const w = who(p); return { filled: !!p, name: w ? w.name : '', rating: w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1 }; }),
     me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result
   };
 }
@@ -266,7 +292,7 @@ function summary(g, pid) {
     code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status, me,
     turn: g.turn, winner: g.winner, deadline: g.deadline, updated: g.updated,
     names: g.players.map(p => { const w = who(p); return w ? w.name : ''; }),
-    filled: g.players.filter(Boolean).length,
+    filled: g.players.filter(Boolean).length, humans: g.players.filter(p => p && !isBot(p)).length, teams: g.teams || 0,
     result: g.result && me >= 0 ? { rank: g.result.ranks[me], delta: g.result.delta ? g.result.delta[me] : null, ranked: g.result.ranked } : null
   };
 }
@@ -362,6 +388,13 @@ function pushProfile(pid) {
   for (const c of clients) if (c.pid === pid) send(c, { t: 'profile', profile: prof(p) });
 }
 
+function lobbyOf(c, m) {                           // la salle d'attente de c, dont c est le créateur
+  const g = games.get(String(m.code || '').toUpperCase());
+  if (!g) throw new Err('not_found');
+  if (g.status !== 'waiting' || hostOf(g) !== c.pid) throw new Err('forbidden');
+  return g;
+}
+
 const OPS = {
   hello(c, m) {
     const pid = String(m.pid || ''), secret = String(m.secret || '');
@@ -402,7 +435,7 @@ const OPS = {
     if (!code) throw new Err('full');
     const b = E.newBoard(n, np, rnd(np)), now = Date.now();
     const g = { code, n, np, mode, turnMs, ranked: m.ranked !== false, status: 'waiting', players: new Array(np).fill(null),
-      o: b.o, c: b.c, turn: rnd(np), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now };
+      o: b.o, c: b.c, turn: rnd(np), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0 };
     g.players[0] = c.pid;
     if (ai) { g.ai = ai; for (let k = 1; k < np; k++) g.players[k] = `bot:${ai}:${k}`; startPlaying(g); }
     games.set(code, g); markG(g);
@@ -438,16 +471,101 @@ const OPS = {
     pushGame(g);
     return {};
   },
-  start(c, m) {                                   // le créateur lance avant que toutes les places soient prises
-    const g = games.get(String(m.code || '').toUpperCase());
-    if (!g) throw new Err('not_found');
-    if (g.status !== 'waiting' || g.players[0] !== c.pid) throw new Err('forbidden');
+  start(c, m) {                                   // le créateur de la salle lance la partie
+    const g = lobbyOf(c, m);
     const filled = g.players.filter(Boolean);
     if (filled.length < 2) throw new Err('not_enough');
-    g.players = filled;
-    resetBoard(g, filled.length);
+    if (g.teams && filled.length < g.np) throw new Err('not_full');      // en équipes, toutes les places doivent être prises
+    if (filled.length < g.np) {                                           // sans équipes : les places vides sont retirées
+      g.players = filled;
+      const sizes = E.SIZES[filled.length];
+      if (sizes && !sizes.slice(0, 3).includes(g.n)) g.n = sizes[3];
+    }
+    const bot = g.players.find(isBot);
+    g.ai = bot ? botLevel(bot) : 0;
+    resetBoard(g, g.players.length);
     g.seq++; g.updated = Date.now();
     startPlaying(g); markG(g); pushGame(g);
+    return {};
+  },
+  cfg(c, m) {                                     // réglages de la salle (créateur)
+    const g = lobbyOf(c, m);
+    if (m.np !== undefined) {
+      const np = Number(m.np);
+      if (![2, 4, 6, 8].includes(np)) throw new Err('invalid');
+      if (np < g.players.length) {
+        const keep = g.players.slice(0, np), out = g.players.slice(np).filter(p => p && !isBot(p));
+        for (const h of out) { const k = keep.findIndex(p => !p || isBot(p)); if (k < 0) throw new Err('too_many_players'); keep[k] = h; }
+        g.players = keep;
+      } else while (g.players.length < np) g.players.push(null);
+      g.np = np;
+      const sizes = E.SIZES[np];
+      if (!sizes.slice(0, 3).includes(g.n)) g.n = sizes[3];
+      if (g.teams && (np % g.teams || np / g.teams < 2)) g.teams = 0;
+    }
+    if (m.n !== undefined) { const sizes = E.SIZES[g.np]; if (!sizes.slice(0, 3).includes(Number(m.n))) throw new Err('invalid'); g.n = Number(m.n); }
+    if (m.teams !== undefined) {
+      const T = Number(m.teams);
+      if (T !== 0 && !(T >= 2 && T <= 4 && g.np % T === 0 && g.np / T >= 2)) throw new Err('invalid');
+      g.teams = T;
+    }
+    if (m.mode !== undefined) {
+      g.mode = m.mode === 'long' ? 'long' : 'live';
+      if (g.mode === 'long') {
+        const h = Number(m.hours);
+        g.turnMs = TURN_CHOICES_H.includes(h) ? h * 3600 * 1000 : (g.turnMs || 24 * 3600 * 1000);
+        if (TEST && Number(m.turnMs) >= 300) g.turnMs = Math.min(Number(m.turnMs), 7 * DAY);
+      } else g.turnMs = 0;
+    }
+    if (m.ranked !== undefined) g.ranked = !!m.ranked;
+    g.updated = Date.now(); markG(g); pushGame(g);
+    return {};
+  },
+  seatai(c, m) {                                  // met, change ou retire une IA sur une place (créateur)
+    const g = lobbyOf(c, m);
+    const seat = Number(m.seat), level = Math.floor(Number(m.level));
+    if (!Number.isInteger(seat) || seat < 0 || seat >= g.np || !(level >= 0 && level <= Bot.LEVELS.length)) throw new Err('invalid');
+    const cur = g.players[seat];
+    if (cur && !isBot(cur)) throw new Err('forbidden');
+    g.players[seat] = level ? `bot:${level}:${seat}` : null;
+    g.updated = Date.now(); markG(g); pushGame(g);
+    return {};
+  },
+  fill(c, m) {                                    // complète les places libres avec des IA (créateur)
+    const g = lobbyOf(c, m);
+    const level = Math.min(Bot.LEVELS.length, Math.max(1, Math.floor(Number(m.level)) || 4));
+    for (let x = 0; x < g.np; x++) if (!g.players[x]) g.players[x] = `bot:${level}:${x}`;
+    g.updated = Date.now(); markG(g); pushGame(g);
+    return {};
+  },
+  kickseat(c, m) {                                // retire un joueur de la salle (créateur)
+    const g = lobbyOf(c, m);
+    const seat = Number(m.seat), p = g.players[seat];
+    if (!p || isBot(p) || p === c.pid) throw new Err('forbidden');
+    g.players[seat] = null; g.updated = Date.now(); markG(g); pushGame(g);
+    return {};
+  },
+  sit(c, m) {                                     // change de place dans la salle (vers une place libre ou tenue par une IA)
+    const g = games.get(String(m.code || '').toUpperCase());
+    if (!g) throw new Err('not_found');
+    const from = g.players.indexOf(c.pid), to = Number(m.seat);
+    if (g.status !== 'waiting' || from < 0 || !Number.isInteger(to) || to < 0 || to >= g.np) throw new Err('forbidden');
+    const cur = g.players[to];
+    if (cur && !isBot(cur)) throw new Err('forbidden');
+    g.players[from] = null; g.players[to] = c.pid;
+    g.updated = Date.now(); markG(g); pushGame(g);
+    return {};
+  },
+  leave(c, m) {                                   // quitter la salle
+    const g = games.get(String(m.code || '').toUpperCase());
+    if (!g) throw new Err('not_found');
+    const seat = g.players.indexOf(c.pid);
+    if (g.status !== 'waiting' || seat < 0) throw new Err('forbidden');
+    g.players[seat] = null;
+    if (!g.players.some(p => p && !isBot(p))) { dropGame(g.code); for (const cl of clients) cl.subs.delete(g.code); return {}; }
+    if (g.host === c.pid) g.host = g.players.find(p => p && !isBot(p));
+    g.updated = Date.now(); markG(g); pushGame(g);
+    c.subs.delete(g.code);
     return {};
   },
   rematch(c, m) {

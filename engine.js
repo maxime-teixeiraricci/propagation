@@ -50,7 +50,9 @@
   }
 
   // Le joueur p ajoute un point en i. Seuil fixe : 4 points, partout. Les points qui sortent de la grille sont perdus.
-  function simulate(board, i, p) {
+  // team (facultatif) : tableau place -> équipe. Un débordement ne prend pas les cases d'un coéquipier : elles reçoivent le point
+  // mais restent à leur propriétaire. Sans équipes, tout ce qui est touché passe au joueur p.
+  function simulate(board, i, p, team) {
     const n = board.n, o = board.o.slice(), c = board.c.slice();
     c[i] += 1; o[i] = p;
     const frames = [{ o: o.slice(), c: c.slice(), got: [i] }];
@@ -61,12 +63,15 @@
       if (!hot.length) break;
       const got = new Set();
       for (const k of hot) c[k] -= 4;
-      for (const k of hot) for (const m of neighbors(n, k)) { c[m] += 1; o[m] = p; got.add(m); }
+      for (const k of hot) for (const m of neighbors(n, k)) {
+        const ally = team && c[m] > 0 && o[m] >= 0 && team[o[m]] === team[p];
+        c[m] += 1; if (!ally) o[m] = p; got.add(m);
+      }
       for (const k of hot) if (c[k] === 0) o[k] = -1;
       frames.push({ o: o.slice(), c: c.slice(), got: [...got] });
-      const owners = new Set();
-      for (let k = 0; k < c.length; k++) if (c[k] > 0) owners.add(o[k]);
-      if (owners.size === 1) { winner = [...owners][0]; break; }
+      const owners = new Set(); let first = -1;
+      for (let k = 0; k < c.length; k++) if (c[k] > 0) { owners.add(team ? team[o[k]] : o[k]); if (first < 0) first = o[k]; }
+      if (owners.size === 1) { winner = first; break; }
     }
     return { frames, o, c, winner };
   }

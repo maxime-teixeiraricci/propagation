@@ -172,6 +172,19 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
   .cell.hot i.on,.cell.got{animation:none}
   .cell i{transition:none}
 }
+.seats{display:flex; flex-direction:column; gap:8px}
+.seat{display:flex; align-items:center; gap:10px 12px; flex-wrap:wrap; background:var(--cell); border:1.5px solid var(--line); border-radius:9px; padding:9px 12px}
+.seat.me{border-color:var(--pc); box-shadow:0 0 0 3px color-mix(in srgb, var(--pc) 20%, transparent)}
+.seat .sw{width:18px; height:18px; background:var(--pc); flex:none; border-radius:50%}
+.seat .who{flex:1 1 150px; min-width:0; display:flex; flex-direction:column}
+.seat .nm{font-weight:600; overflow-wrap:anywhere}
+.seat .sub{font-size:13px; color:var(--muted)}
+.seat .acts{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.seat select{width:auto; padding:6px 8px; font-size:14px}
+.tb{display:inline-block; font:600 11px var(--mono); border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--muted); margin-left:6px; vertical-align:1px}
+.pl .tb{margin-left:0}
+.cfg{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px}
+.cfg label{flex:none}
 .share{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 .share .code{font:500 34px/1 var(--mono); letter-spacing:.2em; margin-right:2px}
 .foot{display:flex; gap:10px; flex-wrap:wrap}
@@ -224,7 +237,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       <h2>Nouvelle partie</h2>
       <div class="row">
         <label for="opp">Adversaires
-          <select id="opp"><option value="friends" selected>Mes amis, en ligne</option><option value="ai">L’ordinateur (IA)</option></select>
+          <select id="opp"><option value="friends" selected>Mes amis (salle d’attente)</option><option value="ai">L’ordinateur (IA)</option></select>
         </label>
         <label for="level" id="levelbox" hidden>Niveau de l’IA<select id="level"></select></label>
       </div>
@@ -284,19 +297,34 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
     <div class="players" id="players"></div>
     <p class="status" id="status" aria-live="polite"></p>
     <p class="timer" id="timer" hidden></p>
-    <div class="card stack" id="waiting" hidden>
+    <div class="card stack" id="room" hidden>
       <div class="share">
         <span class="code" id="gcode" aria-label="Code de la partie"></span>
         <button class="btn ghost" id="copy">Copier le lien</button>
-        <button class="btn" id="startnow" hidden>Lancer maintenant</button>
       </div>
-      <p class="note" id="waitnote"></p>
+      <p class="note" id="roomnote"></p>
+      <div class="cfg">
+        <label for="r-np">Joueurs<select id="r-np"><option value="2">2 joueurs</option><option value="4">4 joueurs</option><option value="6">6 joueurs</option><option value="8">8 joueurs</option></select></label>
+        <label for="r-size">Grille<select id="r-size"></select></label>
+        <label for="r-teams">Équipes<select id="r-teams"></select></label>
+        <label for="r-mode">Rythme<select id="r-mode"><option value="live">Rapide</option><option value="long">Longue durée</option></select></label>
+        <label for="r-hours" id="r-hoursbox">Temps par coup<select id="r-hours"><option value="12">12 heures</option><option value="24">24 heures</option><option value="48">48 heures</option><option value="72">72 heures</option></select></label>
+      </div>
+      <label class="check" for="r-ranked"><input type="checkbox" id="r-ranked"> Partie classée (compte pour l’Élo)</label>
+      <div class="seats" id="seats"></div>
+      <div class="row" id="hostbar">
+        <label for="r-fill">Compléter avec des IA<select id="r-fill"></select></label>
+        <button class="btn ghost" id="r-fillgo">Compléter</button>
+      </div>
+      <div class="row"><button class="btn" id="startnow" hidden>Lancer la partie</button></div>
+      <p class="note" id="roomhint"></p>
     </div>
     <div class="board" id="board" data-turn="0"></div>
     <div class="foot">
       <button class="btn" id="rematch" hidden>Revanche</button>
       <button class="btn ghost" id="kick" hidden></button>
       <button class="btn ghost" id="resign" hidden>Abandonner</button>
+      <button class="btn ghost" id="leaveroom" hidden>Quitter la salle</button>
       <button class="btn ghost" id="leave">Retour à mes parties</button>
     </div>
   </section>
@@ -308,6 +336,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
 <script>
 (()=>{
 const {newBoard,simulate,nextTurn,tally,SIZES}=window.Engine;
+const LETTERS='ABCD';
 const $=s=>document.querySelector(s);
 const NAMES=['Bleu','Orange','Vert','Rose','Rouge','Cyan','Violet','Gris'];
 const POS={1:[[50,50]],2:[[30,30],[70,70]],3:[[50,28],[28,70],[72,70]],4:[[30,30],[70,30],[30,70],[70,70]]};
@@ -393,7 +422,7 @@ const boardEl=$('#board');
 
 let toastT;
 function toast(msg){ $('#toast').textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').textContent=''; },6000); }
-const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.'};
+const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.',not_full:'En équipes, toutes les places doivent être prises : complète avec des IA.',too_many_players:'Retire d’abord des joueurs pour réduire le nombre de places.'};
 const errMsg=e=>ERRS[e&&e.code]||'Connexion impossible, réessaie dans un instant.';
 const show=screen=>{ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; updateTitle(); };
 const setHash=v=>{ try{ if(v) location.hash=v; else if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
@@ -436,6 +465,7 @@ function paint(st,got){
     el.setAttribute('aria-label',`Ligne ${Math.floor(i/n)+1}, colonne ${i%n+1}, ${c} point${c>1?'s':''}${c>0?', '+NAMES[o]:''}`);
   }
 }
+const teamArr=()=>(mode==='online'&&remote&&remote.teams)?Array.from({length:np},(_,s)=>s%remote.teams):null;
 function canPlay(i){
   if(anim||!view.o||view.winner>=0) return false;
   if(mode==='local') return view.o[i]===view.turn;
@@ -469,8 +499,10 @@ function getNames(){
 }
 function resultLine(names){
   const r=remote&&remote.result; if(!r||me<0) return '';
-  const rank=r.ranks[me];
-  let s=(view.winner===me?'Tu as gagné la partie.':`${names[view.winner]||'Un joueur'} a gagné la partie. Tu finis ${ord(rank)}.`);
+  const rank=r.ranks[me], T=remote.teams;
+  let s;
+  if(T){ const wt=view.winner%T; s=wt===me%T?'Ton équipe a gagné la partie.':`L’équipe ${LETTERS[wt]} a gagné la partie.`; }
+  else s=(view.winner===me?'Tu as gagné la partie.':`${names[view.winner]||'Un joueur'} a gagné la partie. Tu finis ${ord(rank)}.`);
   if(r.ranked) s+=` Élo ${r.after[me]} (${r.delta[me]>=0?'+':'−'}${Math.abs(r.delta[me])}).`; else s+=' Partie amicale, sans Élo.';
   return s;
 }
@@ -487,7 +519,8 @@ function renderMeta(){
     const out=!waiting&&seat&&t[i].cells===0;
     const active=!over&&!waiting&&view.turn===i;
     const st=!seat?'place libre':out?'éliminé':`${t[i].cells} case${t[i].cells>1?'s':''} · ${t[i].points} pt${t[i].points>1?'s':''}`;
-    h+=`<div class="pl${active?' active':''}${out?' out':''}${seat?'':' empty'}" style="--pc:var(--p${i})"><span class="sw" data-sh="${i}"></span><div class="who"><div class="top1"><span class="nm"></span><span class="rt"></span></div><span class="st">${st}</span></div></div>`;
+    const T=isOnline?remote.teams:0;
+    h+=`<div class="pl${active?' active':''}${out?' out':''}${seat?'':' empty'}" style="--pc:var(--p${i});order:${T?(i%T)*10+i:i}"><span class="sw" data-sh="${i}"></span><div class="who"><div class="top1"><span class="nm"></span><span class="rt"></span></div><span class="st">${st}${T?` · <span class="tb">Équipe ${LETTERS[i%T]}</span>`:''}</span></div></div>`;
   }
   $('#players').innerHTML=h;
   [...$('#players').children].forEach((el,i)=>{
@@ -496,20 +529,20 @@ function renderMeta(){
   });
   let s;
   const iAmOut=isOnline&&me>=0&&!waiting&&t[me].cells===0;
-  if(waiting) s=`En attente des joueurs (${joined} / ${np})…`;
+  if(waiting) s=`Salle d’attente : ${joined} / ${np} places prises.`;
   else if(over){
     if(isOnline&&me>=0) s=resultLine(names)||(view.winner===me?'Tu as gagné la partie.':`${names[view.winner]} a gagné la partie.`);
+    else if(isOnline&&remote.teams) s=`L’équipe ${LETTERS[view.winner%remote.teams]} gagne la partie.`;
     else s=`${names[view.winner]} gagne la partie.`;
   }
   else if(isOnline&&me<0) s=`Tu regardes la partie. Au tour de ${names[view.turn]}.`;
-  else if(iAmOut) s=`Tu es éliminé. Au tour de ${names[view.turn]}.`;
+  else if(iAmOut){ const T=remote.teams, mate=T&&t.some((x,k)=>k!==me&&k%T===me%T&&x.cells>0); s=mate?`Tu es éliminé, mais ton équipe est toujours en jeu. Au tour de ${names[view.turn]}.`:`Tu es éliminé. Au tour de ${names[view.turn]}.`; }
   else if(isOnline&&view.turn===me) s='À toi de jouer.';
   else s=`Au tour de ${names[view.turn]}.`;
   $('#status').textContent=s;
-  $('#waiting').hidden=!waiting;
-  $('#gcode').textContent=code||'';
-  $('#startnow').hidden=!(waiting&&me===0&&joined>=2);
-  $('#waitnote').textContent=waiting?(`Envoie le lien à tes amis : en l’ouvrant, ils prennent une place. La partie démarre quand les ${np} places sont prises.`+(remote.mode==='long'?` Chacun aura ensuite ${fmtTurn(remote.turnMs)} pour jouer chaque coup, et peut fermer la page entre deux coups.`:'')):'';
+  $('#room').hidden=!waiting; $('#players').hidden=waiting; boardEl.hidden=waiting;
+  $('#leaveroom').hidden=!(waiting&&me>=0);
+  if(waiting) renderRoom();
   $('#rematch').hidden=!over||(isOnline&&me<0);
   $('#resign').hidden=!(isOnline&&!over&&!waiting&&me>=0&&!iAmOut);
   if($('#resign').hidden) resetResign();
@@ -518,7 +551,7 @@ function renderMeta(){
 }
 function updateKick(){
   const b=$('#kick');
-  const show=mode==='online'&&!!remote&&!remote.ai&&remote.mode==='live'&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&now()-turnSince>KICK_MS;
+  const show=mode==='online'&&!!remote&&!remote.seats[view.turn].bot&&remote.mode==='live'&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&now()-turnSince>KICK_MS;
   b.hidden=!show;
   if(show) b.textContent=`${getNames()[view.turn]} ne répond plus ? L’éliminer`;
 }
@@ -542,7 +575,7 @@ setInterval(()=>{ updateKick(); updateTimer(); },1000);
 async function play(i){
   if(!canPlay(i)) return;
   const p=mode==='local'?view.turn:me;
-  const r=simulate({n,o:view.o,c:view.c},i,p);
+  const r=simulate({n,o:view.o,c:view.c},i,p,teamArr());
   const nv={o:r.o,c:r.c,turn:r.winner>=0?p:nextTurn(r.o,r.c,p,np),winner:r.winner,seq:view.seq+1};
   failed=false;
   playFrames(r.frames,()=>{
@@ -569,7 +602,7 @@ function applyRemote(){
   if(d.seq>view.seq){
     const nv={o:d.o,c:d.c,turn:d.turn,winner:d.status==='done'?d.winner:-1,seq:d.seq};
     if(d.last&&view.o&&d.seq===view.seq+1){
-      const r=simulate({n:d.n,o:view.o,c:view.c},d.last.i,d.last.p);
+      const r=simulate({n:d.n,o:view.o,c:view.c},d.last.i,d.last.p,teamArr());
       playFrames(r.frames,()=>{ setView(nv); if(remote.seq>view.seq) applyRemote(); });
     } else setView(nv);
   } else renderMeta();
@@ -587,7 +620,7 @@ function enterGame(c){
   boardEl.innerHTML=''; n=0;
   show('game');
   $('#status').textContent='Chargement de la partie…'; $('#timer').hidden=true;
-  $('#players').innerHTML=''; $('#waiting').hidden=true; $('#rematch').hidden=true; $('#kick').hidden=true; $('#resign').hidden=true;
+  $('#players').innerHTML=''; $('#room').hidden=true; $('#rematch').hidden=true; $('#kick').hidden=true; $('#resign').hidden=true;
   Net.sub(c);
 }
 async function createGame(){
@@ -621,6 +654,77 @@ $('#rematch').addEventListener('click',async()=>{
   if(mode==='local'){ startLocal(); return; }
   try{ await Net.call('rematch',{code}); }catch(e){ toast(errMsg(e)); }
 });
+
+/* ---------- salle d'attente ---------- */
+let roomKey=0;
+function renderRoom(){
+  const d=remote, host=d.host===me, T=d.teams, bots=(Net.features&&Net.features.bots)||[];
+  $('#gcode').textContent=code||'';
+  if(roomKey!==d.np){      // les grilles et les formats d'équipes dépendent du nombre de joueurs
+    roomKey=d.np; const sz=SIZES[d.np];
+    $('#r-size').innerHTML=sz.slice(0,3).map(v=>`<option value="${v}">${v} × ${v}</option>`).join('');
+    const o=[['0','Chacun pour soi']]; for(const t of [2,3,4]) if(d.np%t===0&&d.np/t>=2) o.push([String(t),`${t} équipes de ${d.np/t}`]);
+    $('#r-teams').innerHTML=o.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  }
+  const set=(id,v)=>{ const el=$(id); if(document.activeElement!==el) el.value=String(v); el.disabled=!host; };
+  set('#r-np',d.np); set('#r-size',d.n); set('#r-teams',T); set('#r-mode',d.mode);
+  set('#r-hours',Math.round((d.turnMs||24*3600000)/3600000));
+  $('#r-hoursbox').hidden=d.mode!=='long';
+  const rk=$('#r-ranked'); rk.checked=!!d.ranked; rk.disabled=!host;
+  const free=d.seats.filter(s=>!s.filled).length, joined=d.np-free, humans=d.seats.filter(s=>s.filled&&!s.bot).length;
+  $('#roomnote').textContent=host
+    ?'Tu règles la partie. Envoie le lien à tes amis : en l’ouvrant, ils prennent une place. Tu peux ajouter des IA sur les places libres.'
+    :`${d.host>=0?d.seats[d.host].name:'Le créateur'} règle la partie et la lancera. Tu peux choisir ta place.`;
+  // places
+  const box=$('#seats'); box.textContent='';
+  d.seats.forEach((s,i)=>{
+    const row=document.createElement('div'); row.className='seat'+(i===me?' me':''); row.style.setProperty('--pc',`var(--p${i})`);
+    const sw=document.createElement('span'); sw.className='sw'; sw.dataset.sh=String(i);
+    const who=document.createElement('div'); who.className='who';
+    const nm=document.createElement('span'); nm.className='nm';
+    nm.textContent=s.filled?s.name:'Place libre';
+    if(T){ const tb=document.createElement('span'); tb.className='tb'; tb.textContent='Équipe '+LETTERS[i%T]; nm.append(tb); }
+    const sub=document.createElement('span'); sub.className='sub';
+    sub.textContent=!s.filled?NAMES[i]:i===me?`${NAMES[i]} · toi${i===d.host?' · créateur':''}`:s.bot?`${NAMES[i]} · ordinateur · Élo ${s.rating}`:`${NAMES[i]}${i===d.host?' · créateur':''} · Élo ${s.rating}`;
+    who.append(nm,sub);
+    const acts=document.createElement('div'); acts.className='acts';
+    const btn=(label,fn,ghost)=>{ const b=document.createElement('button'); b.className='btn small'+(ghost===false?'':' ghost'); b.textContent=label; b.addEventListener('click',fn); return b; };
+    const lvl=(cur,fn)=>{ const sel=document.createElement('select'); sel.setAttribute('aria-label','Niveau de l’IA, place '+(i+1));
+      sel.innerHTML=bots.map(b=>`<option value="${b.level}">${b.name} · ${b.elo}</option>`).join(''); sel.value=String(cur||$('#r-fill').value||4); sel.addEventListener('change',()=>fn(+sel.value)); return sel; };
+    const call=(t,o)=>Net.call(t,{code,seat:i,...o}).catch(e=>toast(errMsg(e)));
+    if(!s.filled||s.bot){
+      if(me>=0&&i!==me) acts.append(btn('S’asseoir ici',()=>call('sit')));
+      if(host){
+        if(!s.filled){ const sel=lvl(0,()=>{}); acts.append(sel,btn('Ajouter une IA',()=>call('seatai',{level:+sel.value}))); }
+        else { acts.append(lvl(botLevelOf(s),L=>call('seatai',{level:L})),btn('Retirer',()=>call('seatai',{level:0}))); }
+      }
+    } else if(host&&i!==me) acts.append(btn('Retirer',()=>call('kickseat')));
+    row.append(sw,who,acts); box.append(row);
+  });
+  $('#hostbar').hidden=!host||free===0;
+  const sb=$('#startnow'); sb.hidden=!host;
+  const full=free===0; const ok=joined>=2&&(!T||full);
+  sb.disabled=!ok;
+  let hint='';
+  if(host){
+    if(joined<2) hint='Il faut au moins 2 joueurs : invite un ami ou ajoute une IA.';
+    else if(T&&!full) hint='En équipes, toutes les places doivent être prises : complète avec des IA.';
+    else if(!full) hint=`${free} place${free>1?'s':''} libre${free>1?'s':''} : elle${free>1?'s seront retirées':' sera retirée'} et la partie se jouera à ${joined}${[2,4,6,8].includes(joined)?'':' (départs un peu moins symétriques)'}.`;
+    else hint=humans>1?'Tout le monde est là : tu peux lancer.':'Tu peux lancer la partie.';
+    if(d.mode==='long') hint+=` Chaque joueur aura ${fmtTurn(d.turnMs)} pour jouer chaque coup, et peut fermer la page entre deux coups.`;
+  } else hint=T?'Les équipes sont formées selon les places : choisis ta place pour choisir ton équipe.':'';
+  $('#roomhint').textContent=hint;
+}
+const botLevelOf=s=>{ const bots=(Net.features&&Net.features.bots)||[]; const nm=(s.name||'').replace(/^IA /,''); const b=bots.find(x=>x.name===nm); return b?b.level:4; };
+const cfgCall=o=>Net.call('cfg',{code,...o}).catch(e=>{ toast(errMsg(e)); if(document.activeElement) document.activeElement.blur(); renderMeta(); });
+$('#r-np').addEventListener('change',e=>cfgCall({np:+e.target.value}));
+$('#r-size').addEventListener('change',e=>cfgCall({n:+e.target.value}));
+$('#r-teams').addEventListener('change',e=>cfgCall({teams:+e.target.value}));
+$('#r-mode').addEventListener('change',e=>cfgCall({mode:e.target.value,hours:+$('#r-hours').value}));
+$('#r-hours').addEventListener('change',e=>cfgCall({mode:'long',hours:+e.target.value}));
+$('#r-ranked').addEventListener('change',e=>cfgCall({ranked:e.target.checked}));
+$('#r-fillgo').addEventListener('click',async()=>{ try{ await Net.call('fill',{code,level:+$('#r-fill').value}); }catch(e){ toast(errMsg(e)); } });
+$('#leaveroom').addEventListener('click',async()=>{ try{ await Net.call('leave',{code}); }catch(e){ toast(errMsg(e)); return; } leave(); });
 
 /* ---------- même écran ---------- */
 function startLocal(){
@@ -660,10 +764,11 @@ function renderGames(list,skewNow){
     const mineTurn=s.status==='playing'&&s.turn===s.me;
     const b=document.createElement('button'); b.className='gitem'+(mineTurn?' mine':''); b.style.setProperty('--pc',`var(--p${Math.max(0,s.me)})`);
     b.innerHTML=`<span class="sw" data-sh="${Math.max(0,s.me)}"></span><span class="gi"><span class="g1"></span><span class="g2"></span></span>`;
-    b.querySelector('.g1').textContent=`Partie ${s.code} · ${s.ai?'Contre l’IA':s.mode==='long'?'Longue durée':'Rapide'} · ${s.np} joueurs · ${s.n}×${s.n}`;
+    const kind=s.status==='waiting'?'Salle':(s.ai&&s.humans<=1)?'Contre l’IA':s.teams?'Par équipes':s.mode==='long'?'Longue durée':'Rapide';
+    b.querySelector('.g1').textContent=`Partie ${s.code} · ${kind}${s.ai&&s.humans>1?' + IA':''} · ${s.np} joueurs · ${s.n}×${s.n}`;
     const left=s.deadline?fmtLeft(s.deadline-(Date.now()+skewNow)):'';
     let t;
-    if(s.status==='waiting') t=`En attente de joueurs (${s.filled}/${s.np})`;
+    if(s.status==='waiting') t=`Salle d’attente · ${s.filled}/${s.np} places prises`;
     else if(s.status==='playing') t=mineTurn?`À toi de jouer${left?' · '+left:''}`:`Au tour de ${s.names[s.turn]||NAMES[s.turn]}${left?' · '+left:''}`;
     else if(s.result) t=`Terminée · ${s.winner===s.me?'victoire':ord(s.result.rank)}${s.result.ranked&&s.result.delta!=null?` · Élo ${s.result.delta>=0?'+':'−'}${Math.abs(s.result.delta)}`:''}`;
     else t='Terminée';
@@ -800,15 +905,17 @@ function fillLevels(){
   const mine=(Net.profile&&Net.profile.elo)||1000;
   let best=bots[0]; bots.forEach(b=>{ if(Math.abs(b.elo-mine)<Math.abs(best.elo-mine)) best=b; });   // niveau proche de ton Élo par défaut
   sel.innerHTML=bots.map(b=>`<option value="${b.level}"${b===best?' selected':''}>${b.name} · Élo ${b.elo}</option>`).join('');
+  $('#r-fill').innerHTML=sel.innerHTML;
 }
 function updateModeNote(){
   const ai=$('#opp').value==='ai', long=$('#mode').value==='long';
   $('#levelbox').hidden=!ai; $('#moderow').hidden=ai; $('#hoursbox').hidden=!long;
-  $('#create').textContent=ai?'Jouer contre l’IA':'Créer une partie en ligne';
+  $('#create').textContent=ai?'Jouer contre l’IA':'Créer une salle';
   let t;
   if(ai) t='Tu joues tout de suite, sans attendre personne, et tu peux fermer la page : la partie reste dans « Mes parties ». Chaque niveau d’IA a un Élo fixe : battre un niveau plus fort que toi rapporte plus, et un niveau bien plus faible presque rien. ';
   else{
-    t=long?'Chaque joueur a le temps choisi pour jouer son coup, puis tu peux fermer la page. Un joueur qui dépasse le délai est éliminé. Retrouve tes parties plus haut, dans « Mes parties ».':'Tout le monde joue en direct. Si quelqu’un ne répond plus, les autres peuvent l’éliminer au bout de 45 secondes.';
+    t='Tu arrives dans une salle d’attente : tu y règles la partie, tu invites tes amis, tu ajoutes des IA et tu formes des équipes. ';
+    t+=long?'Chaque joueur a le temps choisi pour jouer son coup, puis tu peux fermer la page. Un joueur qui dépasse le délai est éliminé. Retrouve tes parties plus haut, dans « Mes parties ».':'Tout le monde joue en direct. Si quelqu’un ne répond plus, les autres peuvent l’éliminer au bout de 45 secondes.';
     if(long&&online&&Net.features&&Net.features.durable===false) t+=' Attention : ce serveur ne garde pas les parties s’il redémarre ou s’endort, une partie longue risque d’être perdue (voir le README, section « Garder les parties »).';
   }
   $('#modenote').textContent=t;
@@ -838,6 +945,10 @@ $('#copy').addEventListener('click',async()=>{
 });
 
 /* ---------- démarrage ---------- */
+window.addEventListener('hashchange',()=>{          // un lien collé dans un onglet déjà ouvert
+  const c=(location.hash||'').slice(1).toUpperCase();
+  if(/^[A-HJ-NP-Z2-9]{4}$/.test(c)&&online&&mode!=='local'&&!(mode==='online'&&code===c)) joinGame(c,false);
+});
 fillSizes(); updateModeNote();
 $('#name').value=ls.get('propagation:name')||'';
 Net.on('state',st=>{
