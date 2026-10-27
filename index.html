@@ -150,6 +150,11 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
   border-color:color-mix(in srgb, var(--pc) 35%, var(--line));
 }
 .cell.can{border-color:var(--pc); cursor:pointer}
+.cell.void{visibility:hidden}
+.cell.doom{outline:2px dashed color-mix(in srgb, var(--danger) 55%, transparent); outline-offset:-3px}
+.cell.doom.soon{outline:2px dashed var(--danger)}
+.sdnote{font-weight:600}
+.sdnote.soon{color:var(--danger)}
 .cell.can:hover{background:color-mix(in srgb, var(--pc) 26%, var(--cell))}
 .cell i{
   position:absolute; left:50%; top:50%; width:28%; height:28%; border-radius:50%;
@@ -281,6 +286,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       </div>
       <p class="note" id="modenote"></p>
       <label class="check" for="ranked"><input type="checkbox" id="ranked" checked> Partie classée (compte pour l’Élo)</label>
+      <label class="check" for="sudden" id="suddenbox" hidden><input type="checkbox" id="sudden"> Mort subite : tous les 5 tours, le bord de la grille disparaît</label>
       <p class="note" id="net">Connexion au jeu en ligne…</p>
       <div class="row">
         <button class="btn" id="create" disabled>Créer une partie en ligne</button>
@@ -309,6 +315,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
       <ol>
         <li>Chaque joueur commence avec un point sur une case, de 2 à 8 joueurs. Les départs sont placés pour que chacun ait la même surface autour de lui ; la place de chacun et le premier joueur sont tirés au sort à chaque partie.</li>
         <li>À ton tour, tu ajoutes un point sur une de tes cases.</li>
+        <li>Option « mort subite » (à 6 et 8 joueurs) : tous les 5 tours (un tour = chaque joueur a joué une fois), la bordure de la grille disparaît. Les points qui s’y trouvent sont détruits, les cases ne peuvent plus être jouées et les débordements qui y arrivent sont perdus. Un joueur qui n’a plus de case est éliminé. Il reste toujours un carré au centre.</li>
         <li>Une case qui atteint 4 points déborde : elle perd 4 points et en envoie un sur chacune de ses 4 voisines, qui passent de ton côté. Le seuil est 4 partout, y compris sur un bord ou dans un coin. Les points qui sortent de la grille sont perdus.</li>
         <li>Les débordements s’enchaînent tant qu’une case atteint 4 points.</li>
         <li>Un joueur qui n’a plus aucune case est éliminé et son tour est sauté. Le dernier joueur qui a encore des cases gagne.</li>
@@ -323,6 +330,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
     <div class="players" id="players"></div>
     <p class="status" id="status" aria-live="polite"></p>
     <p class="timer" id="timer" hidden></p>
+    <p class="timer sdnote" id="sdnote" hidden></p>
     <div class="card stack" id="room" hidden>
       <div class="share">
         <span class="code" id="gcode" aria-label="Code de la partie"></span>
@@ -337,6 +345,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
         <label for="r-hours" id="r-hoursbox">Temps par coup<select id="r-hours"><option value="12">12 heures</option><option value="24">24 heures</option><option value="48">48 heures</option><option value="72">72 heures</option></select></label>
       </div>
       <label class="check" for="r-ranked"><input type="checkbox" id="r-ranked"> Partie classée (compte pour l’Élo)</label>
+      <label class="check" for="r-sudden" id="r-suddenbox" hidden><input type="checkbox" id="r-sudden"> Mort subite : tous les 5 tours, le bord de la grille disparaît</label>
       <div class="seats" id="seats"></div>
       <div class="row" id="hostbar">
         <label for="r-fill">Compléter avec des IA<select id="r-fill"></select></label>
@@ -362,7 +371,7 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
 <script src="engine.js"></script>
 <script>
 (()=>{
-const {newBoard,simulate,nextTurn,tally,SIZES}=window.Engine;
+const {newBoard,simulate,step,nextTurn,tally,SIZES,ring,maxDead,SUDDEN_ROUNDS}=window.Engine;
 const LETTERS='ABCD';
 const $=s=>document.querySelector(s);
 const NAMES=['Bleu','Orange','Vert','Rose','Rouge','Cyan','Violet','Gris'];
@@ -473,10 +482,15 @@ function buildBoard(size){
   for(let i=0;i<n*n;i++) h+=`<button class="cell" data-i="${i}" data-o="" disabled><i></i><i></i><i></i><i></i></button>`;
   boardEl.innerHTML=h;
 }
+let sdOn=false, sdSoon=false;     // mort subite : l'anneau suivant est signalé (sdSoon : il disparaît au prochain tour)
 function paint(st,got){
-  const cells=boardEl.children, g=new Set(got||[]);
+  const cells=boardEl.children, g=new Set(got||[]), dead=st.dead||0, nn=n;
   for(let i=0;i<cells.length;i++){
     const el=cells[i], c=st.c[i], o=st.o[i], k=Math.min(c,4);
+    const rg=dead||sdOn?ring(nn,i):9;
+    el.classList.toggle('void',rg<dead);
+    el.classList.toggle('doom',sdOn&&rg===dead);
+    el.classList.toggle('soon',sdOn&&sdSoon&&rg===dead);
     if(el._k!==k){
       el._k=k; const pos=POS[k]||[];
       for(let j=0;j<4;j++){
@@ -515,9 +529,12 @@ function playFrames(frames,done){
 }
 function setView(v){
   if(v.seq!==view.seq||v.turn!==view.turn) turnSince=now();
+  if(view.o&&(v.dead||0)>(view.dead||0)) toast('Mort subite : le bord de la grille a disparu !');
+  const left=SUDDEN_ROUNDS-((v.round||0)%SUDDEN_ROUNDS);
+  sdOn=!!v.sudden&&v.winner<0&&(v.dead||0)<maxDead(v.n||n); sdSoon=left<=1;
   view=v; paint(v,[]); renderMeta();
 }
-function resetView(){ view={seq:-1,o:null,c:null,turn:0,winner:-1}; }
+function resetView(){ view={seq:-1,o:null,c:null,turn:0,winner:-1}; sdOn=false; }
 
 /* ---------- affichage de la partie ---------- */
 function getNames(){
@@ -593,6 +610,12 @@ function renderMeta(){
   else if(isOnline&&view.turn===me) s='À toi de jouer.';
   else s=`Au tour de ${names[view.turn]}.`;
   $('#status').textContent=s;
+  const sn=$('#sdnote');
+  if(view.sudden&&!waiting&&!over){
+    const dd=view.dead||0, left=SUDDEN_ROUNDS-((view.round||0)%SUDDEN_ROUNDS);
+    sn.hidden=false; sn.classList.toggle('soon',dd<maxDead(n)&&left<=1);
+    sn.textContent=dd>=maxDead(n)?'Mort subite : la grille ne peut plus rétrécir.':`Mort subite : le bord disparaît dans ${left} tour${left>1?'s':''}.`;
+  } else sn.hidden=true;
   $('#room').hidden=!waiting; $('#players').hidden=waiting; boardEl.hidden=waiting;
   $('#leaveroom').hidden=!(waiting&&me>=0);
   if(waiting) renderRoom();
@@ -628,8 +651,8 @@ setInterval(()=>{ updateKick(); updateTimer(); },1000);
 async function play(i){
   if(!canPlay(i)) return;
   const p=mode==='local'?view.turn:me;
-  const r=simulate({n,o:view.o,c:view.c},i,p,teamArr());
-  const nv={o:r.o,c:r.c,turn:r.winner>=0?p:nextTurn(r.o,r.c,p,np),winner:r.winner,seq:view.seq+1};
+  const r=step({n,o:view.o,c:view.c,np,dead:view.dead||0},i,p,teamArr(),!!view.sudden,view.round||0);
+  const nv={o:r.o,c:r.c,turn:r.winner>=0?p:nextTurn(r.o,r.c,p,np),winner:r.winner,seq:view.seq+1,sudden:view.sudden,dead:r.dead,round:r.round,n};
   failed=false;
   playFrames(r.frames,()=>{
     if(failed){ failed=false; resync(); return; }
@@ -653,9 +676,9 @@ function applyRemote(){
   np=d.np;
   if(!boardEl.children.length||n!==d.n){ buildBoard(d.n); resetView(); }
   if(d.seq>view.seq){
-    const nv={o:d.o,c:d.c,turn:d.turn,winner:d.status==='done'?d.winner:-1,seq:d.seq};
+    const nv={o:d.o,c:d.c,turn:d.turn,winner:d.status==='done'?d.winner:-1,seq:d.seq,sudden:!!d.sudden,dead:d.dead||0,round:d.round||0,n:d.n};
     if(d.last&&view.o&&d.seq===view.seq+1){
-      const r=simulate({n:d.n,o:view.o,c:view.c},d.last.i,d.last.p,teamArr());
+      const r=simulate({n:d.n,o:view.o,c:view.c,dead:view.dead||0,shrinkTo:d.dead||0},d.last.i,d.last.p,teamArr());
       playFrames(r.frames,()=>{ if(mode!=='online'||!remote) return; setView(nv); if(remote.seq>view.seq) applyRemote(); });
     } else setView(nv);
   } else renderMeta();
@@ -680,6 +703,7 @@ async function createGame(){
   $('#create-err').textContent=''; busy(true);
   try{
     const o={np:+$('#np').value||2,n:+$('#size').value,mode:$('#mode').value,hours:+$('#hours').value,ranked:$('#ranked').checked};
+    o.sudden=o.np>4&&$('#sudden').checked;
     if($('#opp').value==='ai') o.ai={level:+$('#level').value||3};
     if(window.__TURN_MS) o.turnMs=window.__TURN_MS;   // essais uniquement
     const r=await Net.call('create',o);
@@ -724,6 +748,7 @@ function renderRoom(){
   set('#r-hours',Math.round((d.turnMs||24*3600000)/3600000));
   $('#r-hoursbox').hidden=d.mode!=='long';
   const rk=$('#r-ranked'); rk.checked=!!d.ranked; rk.disabled=!host;
+  const sd=$('#r-sudden'); $('#r-suddenbox').hidden=d.np<=4; sd.checked=!!d.sudden; sd.disabled=!host;
   const free=d.seats.filter(s=>!s.filled).length, joined=d.np-free, humans=d.seats.filter(s=>s.filled&&!s.bot).length;
   $('#roomnote').textContent=host
     ?'Tu règles la partie. Envoie le lien à tes amis : en l’ouvrant, ils prennent une place. Tu peux ajouter des IA sur les places libres.'
@@ -776,6 +801,7 @@ $('#r-teams').addEventListener('change',e=>cfgCall({teams:+e.target.value}));
 $('#r-mode').addEventListener('change',e=>cfgCall({mode:e.target.value,hours:+$('#r-hours').value}));
 $('#r-hours').addEventListener('change',e=>cfgCall({mode:'long',hours:+e.target.value}));
 $('#r-ranked').addEventListener('change',e=>cfgCall({ranked:e.target.checked}));
+$('#r-sudden').addEventListener('change',e=>cfgCall({sudden:e.target.checked}));
 $('#r-fillgo').addEventListener('click',async()=>{ try{ await Net.call('fill',{code,level:+$('#r-fill').value}); }catch(e){ toast(errMsg(e)); } });
 $('#leaveroom').addEventListener('click',async()=>{ try{ await Net.call('leave',{code}); }catch(e){ toast(errMsg(e)); return; } leave(); });
 
@@ -789,7 +815,7 @@ function startLocal(){
   show('game');
   $('#resign').hidden=true; $('#timer').hidden=true; $('#kick').hidden=true;
   resetView();
-  setView({o:b.o,c:b.c,turn:rnd(np),winner:-1,seq:0});
+  setView({o:b.o,c:b.c,turn:rnd(np),winner:-1,seq:0,n:b.n,np,sudden:np>4&&$('#sudden').checked,dead:0,round:0});
 }
 function leave(){
   if(code) Net.unsub(code);
@@ -974,7 +1000,9 @@ function updateModeNote(){
   }
   $('#modenote').textContent=t;
 }
-$('#np').addEventListener('change',fillSizes);
+function updateSudden(){ $('#suddenbox').hidden=(+$('#np').value||2)<=4; }
+$('#np').addEventListener('change',()=>{ fillSizes(); updateSudden(); });
+updateSudden();
 $('#mode').addEventListener('change',updateModeNote);
 $('#opp').addEventListener('change',updateModeNote);
 $('#create').addEventListener('click',createGame);

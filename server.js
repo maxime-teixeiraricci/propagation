@@ -212,7 +212,7 @@ function runBot(code, seq) {
   if (!g || g.status !== 'playing' || g.seq !== seq || !isBot(g.players[g.turn])) return;
   try {
     const seat = g.turn;
-    let i = Bot.choose(botLevel(g.players[seat]), { n: g.n, o: g.o, c: g.c }, seat, g.np, Math.random, null, g.teams || 0);
+    let i = Bot.choose(botLevel(g.players[seat]), { n: g.n, o: g.o, c: g.c, dead: g.dead || 0 }, seat, g.np, Math.random, null, g.teams || 0);
     if (!(Number.isInteger(i) && i >= 0 && i < g.c.length && g.o[i] === seat && g.c[i] > 0)) {    // garde-fou : coup toujours légal
       const own = []; for (let k = 0; k < g.c.length; k++) if (g.o[k] === seat && g.c[k] > 0) own.push(k);
       if (!own.length) return;
@@ -251,8 +251,8 @@ function settle(g, opt) {
   markG(g);
 }
 function applyMove(g, seat, i) {
-  const r = E.simulate({ n: g.n, o: g.o, c: g.c }, i, seat, teamArr(g));
-  g.o = r.o; g.c = r.c; g.last = { i, p: seat };
+  const r = E.step({ n: g.n, o: g.o, c: g.c, np: g.np, dead: g.dead || 0 }, i, seat, teamArr(g), !!g.sudden, g.round || 0);
+  g.o = r.o; g.c = r.c; g.dead = r.dead; g.round = r.round; g.last = { i, p: seat };
   g.botWait = Math.min(6000, 450 + 380 * (r.frames.length - 1));      // durée de l'animation chez le joueur
   settle(g, { from: seat, advance: true });
 }
@@ -263,7 +263,7 @@ function eliminate(g, seat) {              // abandon, absence ou délai dépass
 }
 function resetBoard(g, np) {
   const b = E.newBoard(g.n, np, rnd(np));
-  g.np = np; g.o = b.o; g.c = b.c; g.turn = rnd(np); g.last = null; g.winner = -1; g.elim = []; g.result = null;
+  g.np = np; g.o = b.o; g.c = b.c; g.dead = 0; g.round = 0; if (np <= 4) g.sudden = false; g.turn = rnd(np); g.last = null; g.winner = -1; g.elim = []; g.result = null;
 }
 function joinSeat(g, pid) {
   let idx = g.players.indexOf(pid);
@@ -283,7 +283,7 @@ function viewFor(g, pid) {
   return {
     code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status,
     o: g.o, c: g.c, turn: g.turn, seq: g.seq, last: g.last, winner: g.winner,
-    teams: g.teams || 0, host: g.players.indexOf(hostOf(g)),
+    teams: g.teams || 0, host: g.players.indexOf(hostOf(g)), sudden: !!g.sudden, dead: g.dead || 0, round: g.round || 0,
     seats: g.players.map((p, x) => { const w = who(p); return { filled: !!p, name: w ? w.name : '', rating: w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1 }; }),
     me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result
   };
@@ -437,7 +437,8 @@ const OPS = {
     if (!code) throw new Err('full');
     const b = E.newBoard(n, np, rnd(np)), now = Date.now();
     const g = { code, n, np, mode, turnMs, ranked: m.ranked !== false, status: 'waiting', players: new Array(np).fill(null),
-      o: b.o, c: b.c, turn: rnd(np), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0 };
+      o: b.o, c: b.c, turn: rnd(np), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0,
+      sudden: np > 4 && !!m.sudden, dead: 0, round: 0 };
     g.players[0] = c.pid;
     if (ai) { g.ai = ai; for (let k = 1; k < np; k++) g.players[k] = `bot:${ai}:${k}`; startPlaying(g); }
     games.set(code, g); markG(g);
@@ -520,6 +521,8 @@ const OPS = {
       } else g.turnMs = 0;
     }
     if (m.ranked !== undefined) g.ranked = !!m.ranked;
+    if (m.sudden !== undefined) g.sudden = !!m.sudden;
+    if (g.np <= 4) g.sudden = false;                  // la mort subite n'existe qu'à 6 et 8 joueurs
     g.updated = Date.now(); markG(g); pushGame(g);
     return {};
   },

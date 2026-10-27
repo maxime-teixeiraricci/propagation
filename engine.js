@@ -2,13 +2,20 @@
 (function (root) {
   'use strict';
 
-  function neighbors(n, i) {
+  // Anneau d'une case : distance au bord le plus proche (0 = la bordure de la grille).
+  function ring(n, i) { const x = i % n, y = (i - x) / n; return Math.min(x, y, n - 1 - x, n - 1 - y); }
+  // Mort subite : nombre maximal d'anneaux qui peuvent disparaître (il reste toujours un carré de 2×2 ou 3×3 au centre).
+  const maxDead = n => Math.max(0, Math.floor((n - 2) / 2));
+  const SUDDEN_ROUNDS = 5;     // la bordure disparaît tous les 5 tours
+
+  // dead (facultatif) : nombre d'anneaux disparus. Les cases disparues n'existent plus : les points qui y vont sont perdus.
+  function neighbors(n, i, dead) {
     const x = i % n, y = (i - x) / n, r = [];
     if (x > 0) r.push(i - 1);
     if (x < n - 1) r.push(i + 1);
     if (y > 0) r.push(i - n);
     if (y < n - 1) r.push(i + n);
-    return r;
+    return dead ? r.filter(m => ring(n, m) >= dead) : r;
   }
 
   // Cases de départ, dans l'ordre où elles se suivent autour de la grille (sens des aiguilles d'une montre).
@@ -52,10 +59,12 @@
   // Le joueur p ajoute un point en i. Seuil fixe : 4 points, partout. Les points qui sortent de la grille sont perdus.
   // team (facultatif) : tableau place -> équipe. Un débordement ne prend pas les cases d'un coéquipier : elles reçoivent le point
   // mais restent à leur propriétaire. Sans équipes, tout ce qui est touché passe au joueur p.
+  // board.dead : anneaux déjà disparus. board.shrinkTo : si supérieur, la bordure disparaît après le coup (mort subite),
+  // sauf si le coup gagne la partie ou s'il ne resterait plus aucune case.
   function simulate(board, i, p, team) {
-    const n = board.n, o = board.o.slice(), c = board.c.slice();
+    const n = board.n, o = board.o.slice(), c = board.c.slice(), dead = board.dead || 0;
     c[i] += 1; o[i] = p;
-    const frames = [{ o: o.slice(), c: c.slice(), got: [i] }];
+    const frames = [{ o: o.slice(), c: c.slice(), got: [i], dead }];
     let winner = -1;
     for (let w = 0; w < 3000; w++) {
       const hot = [];
@@ -63,17 +72,46 @@
       if (!hot.length) break;
       const got = new Set();
       for (const k of hot) c[k] -= 4;
-      for (const k of hot) for (const m of neighbors(n, k)) {
+      for (const k of hot) for (const m of neighbors(n, k, dead)) {
         const ally = team && c[m] > 0 && o[m] >= 0 && team[o[m]] === team[p];
         c[m] += 1; if (!ally) o[m] = p; got.add(m);
       }
       for (const k of hot) if (c[k] === 0) o[k] = -1;
-      frames.push({ o: o.slice(), c: c.slice(), got: [...got] });
+      frames.push({ o: o.slice(), c: c.slice(), got: [...got], dead });
       const owners = new Set(); let first = -1;
       for (let k = 0; k < c.length; k++) if (c[k] > 0) { owners.add(team ? team[o[k]] : o[k]); if (first < 0) first = o[k]; }
       if (owners.size === 1) { winner = first; break; }
     }
-    return { frames, o, c, winner };
+    let newDead = dead;
+    const to = Math.min(board.shrinkTo || 0, maxDead(n));
+    if (winner < 0 && to > dead) {
+      let any = false;
+      for (let k = 0; k < c.length; k++) if (c[k] > 0 && ring(n, k) >= to) { any = true; break; }
+      if (any) {
+        for (let k = 0; k < c.length; k++) if (ring(n, k) < to) { c[k] = 0; o[k] = -1; }
+        newDead = to;
+        frames.push({ o: o.slice(), c: c.slice(), got: [], dead: newDead, shrunk: true });
+        const owners = new Set(); let first = -1;
+        for (let k = 0; k < c.length; k++) if (c[k] > 0) { owners.add(team ? team[o[k]] : o[k]); if (first < 0) first = o[k]; }
+        if (owners.size === 1) winner = first;
+      }
+    }
+    return { frames, o, c, winner, dead: newDead };
+  }
+
+  // Un coup avec la règle de mort subite. board : { n, o, c, np, dead }. round : tours déjà terminés.
+  // Un tour se termine quand on repasse par le premier siège (le jeu revient à un siège de numéro inférieur ou égal).
+  // Tous les 5 tours terminés, la bordure encore en place disparaît.
+  function step(board, i, p, team, sudden, round) {
+    round = round || 0;
+    let r = simulate(board, i, p, team);
+    if (!sudden || r.winner >= 0) { r.round = round; return r; }
+    const wrapped = nextTurn(r.o, r.c, p, board.np) <= p;
+    if (wrapped) round++;
+    const dead = board.dead || 0;
+    if (wrapped && round % SUDDEN_ROUNDS === 0 && dead < maxDead(board.n)) r = simulate(Object.assign({}, board, { shrinkTo: dead + 1 }), i, p, team);
+    r.round = round;
+    return r;
   }
 
   // Joueur suivant qui a encore au moins une case (les éliminés sont sautés).
@@ -124,7 +162,7 @@
     return d.map(Math.round);
   }
 
-  const api = { neighbors, LAYOUTS, SIZES, startCells, newBoard, simulate, nextTurn, tally, ranksFrom, eloDeltas };
+  const api = { neighbors, ring, maxDead, SUDDEN_ROUNDS, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Engine = api;
 })(typeof window !== 'undefined' ? window : this);
