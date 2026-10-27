@@ -281,12 +281,12 @@ h1{font:800 clamp(36px,9vw,52px)/.95 var(--display); margin:0 0 2px; color:#FFD9
 /* panneaux */
 .card{position:relative; padding:26px 18px 18px; background:#F5F9FF; border:4px solid #fff; border-radius:20px; box-shadow:0 6px 0 rgba(30,70,160,.30)}
 h2{font:800 21px/1.1 var(--display); margin:0 0 12px; letter-spacing:0}
-.card > h2:first-child{display:inline-block; align-self:flex-start; margin:-40px 0 6px -12px; padding:7px 22px 8px; color:#fff; transform:rotate(-1.5deg);
+.card.major > h2:first-child{display:inline-block; align-self:flex-start; margin:-40px 0 6px -12px; padding:7px 22px 8px; color:#fff; transform:rotate(-1.5deg);
   background:radial-gradient(rgba(255,255,255,.2) 1.6px, transparent 2.1px) 0 0/10px 10px, linear-gradient(#3F7CF0,#2358C8);
   border:3px solid #fff; border-radius:16px; text-shadow:0 2px 0 #143A8F; box-shadow:0 4px 0 rgba(20,58,143,.45)}
 h3.sub{font:800 17px/1.2 var(--display); color:var(--accent); margin:10px 0 0}
 #room.card{padding-top:20px}
-#lobby{row-gap:42px} .lcol{gap:42px}
+
 label{color:var(--fg); font-weight:700; font-size:14px}
 label.check{color:var(--fg); font-weight:700}
 input[type=checkbox]{accent-color:var(--accent); width:20px; height:20px; flex:none}
@@ -415,6 +415,83 @@ details ol{font-weight:700}
 @media (prefers-reduced-motion: reduce){ .logo i::after{animation:none; transform:scale(1)} .cell.doom.soon,.board.shake{animation:none} .cell.hot::after,.spark{display:none} .toast{animation:none} }
 @media (max-width:640px){ .players{grid-template-columns:1fr} .players:has(.pl:nth-child(5)){grid-template-columns:1fr 1fr} .players:has(.pl:nth-child(5)) .pl .rn{display:none} html::before{width:170px; height:140px; top:-80px; right:-60px} }
 @media (max-width:420px){ .hero{gap:10px} .logo{grid-template-columns:repeat(2,18px)} .logo i{width:18px; height:18px} }
+
+/* ================= accueil : hiérarchie =================
+   1. ce que je reprends (mes parties, d'abord celles où c'est mon tour)  2. ce que je lance (nouvelle partie, un seul gros bouton)
+   3. ce que je rejoins  4. ce que je consulte rarement (compte, classement, règles : repliés) */
+#lobby{display:flex; flex-direction:column; gap:26px}
+.card.major{margin-top:16px}
+.card.minor{padding-top:18px}
+.card.minor > h2,.mebar > h2{font:800 19px/1.1 var(--display); margin:0 0 4px}
+.badge{display:inline-block; margin-left:8px; padding:2px 10px 3px; border-radius:8px; background:var(--gold); color:var(--ink); font:800 13px var(--body); text-shadow:none; border:2px solid var(--ink); vertical-align:2px}
+label.fl,.fl{display:block; flex:none; font:700 13px var(--body); color:var(--muted); margin:0 0 6px}
+.field{position:relative; display:flex; flex-direction:column; min-width:0}
+.field .hint{margin-top:6px; color:var(--muted); font-weight:600; font-size:13px}
+.row2{display:grid; grid-template-columns:1.5fr 1fr; gap:14px; align-items:start}
+.sr{position:absolute!important; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); border:0; white-space:nowrap}
+.seg{display:flex; gap:4px; padding:4px; background:#E3EEFF; border-radius:14px}
+.seg button{flex:1; min-width:0; font:800 16px var(--display); padding:10px 6px; border:0; border-radius:10px; background:transparent; color:var(--muted); cursor:pointer; transition:background .1s, color .1s}
+.seg button:hover:not(:disabled):not(.on){background:#F5F9FF}
+.seg button.on{background:#fff; color:var(--accent); box-shadow:0 2px 0 #A9C3EE, 0 0 0 2px var(--accent)}
+.seg button:disabled{opacity:.4; cursor:not-allowed}
+.seg button:focus-visible{outline:3px solid var(--ink); outline-offset:2px}
+summary{display:flex; align-items:center; gap:10px; cursor:pointer; list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:""; margin-left:auto; flex:none; width:8px; height:8px; border-right:3px solid var(--muted); border-bottom:3px solid var(--muted); transform:rotate(45deg) translate(-2px,-2px); transition:transform .15s}
+details[open] > summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+details.adv,.card details.adv{background:#F0F6FF; border:2px solid #D3E3FC; border-radius:14px; box-shadow:none; padding:11px 14px}
+details.adv summary{font:800 15px var(--display)}
+.advsum{font:700 13px var(--body); color:var(--muted); margin-left:auto; text-align:right}
+details.adv summary::after{margin-left:6px}
+details.adv > :not(summary){margin-top:12px}
+.actions{display:flex; flex-direction:column; gap:12px; margin-top:4px}
+.actions .btn{width:100%}
+#create{font-size:21px; padding:15px 20px 16px}
+#local{font-size:16px; padding:10px 20px 11px}
+.note:empty{display:none}
+
+/* bandeau compte : l'essentiel d'un coup d'œil, le reste est replié */
+.mebar{padding:16px 18px; gap:12px; display:flex; flex-direction:column}
+.mb-top{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:0 14px; align-items:start}
+.mb-emb{display:block; min-width:42px}
+.mb-emb svg.emb{height:58px; width:44px}
+.mb-main{display:flex; flex-direction:column; min-width:0}
+.mb-main input{font:700 17px var(--body); padding:7px 12px; border-radius:10px}
+.mb-main .fl{margin-bottom:4px}
+.mebar .elo{text-align:right; font-size:42px; padding-top:2px}
+.mebar .elo small{font-weight:700}
+.mebar .rankline{background:none; border:0; padding:0; margin-top:10px; display:block}
+.mebar .rk-txt{display:flex; flex-direction:column; gap:4px}
+.mebar .rk-txt b{order:1} .mebar .rk-bar{order:2} .mebar .rk-txt small{order:3}
+.mebar .rankline b{font:800 19px/1.1 var(--display)}
+.mebar .rankline small{font-size:13px; text-align:left; min-width:0}
+.mebar .rk-bar{height:10px; border-width:2px}
+.mebar #pstats{font-size:13px}
+.mebar .note.warn{font-size:13.5px; border-width:2px; padding:8px 12px}
+details.more,.card details.more{background:none; border:0; border-top:2px solid #E3EEFF; border-radius:0; box-shadow:none; padding:10px 0 0}
+details.more summary{font:700 14px var(--body); color:var(--muted)}
+details.more > :not(summary){margin-top:10px}
+
+/* mes parties : le titre d'abord, l'état en évidence, le détail en petit */
+.gitem{flex-wrap:wrap}
+.gi{flex:1; min-width:0; gap:1px}
+.g1{font:800 16px/1.2 var(--display)}
+.g2{font:800 15px/1.25 var(--body); color:var(--accent)}
+.g3{font:600 13px/1.2 var(--body); color:var(--muted)}
+.gitem.mine .g2{color:#fff; font-size:16px}
+.gitem.mine .g3{color:rgba(255,255,255,.85)}
+#rooms .g2{font-weight:700; color:var(--muted); font-size:13.5px}
+#rooms .g1{font-size:15px}
+#topbox,#rulesbox{padding:12px 16px}
+#topbox summary,#rulesbox summary{font:800 16px var(--display)}
+
+@media (min-width:960px){
+  #lobby{display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); grid-template-areas:"me me" "new games" "new join" "top rules"; grid-template-rows:auto auto 1fr auto; gap:22px 28px; align-items:start}
+  #mebar{grid-area:me} #ncard{grid-area:new} #gcard{grid-area:games} #jcard{grid-area:join} #topbox{grid-area:top} #rulesbox{grid-area:rules}
+  #lobby > details{grid-column:auto}
+  .mb-top{grid-template-columns:auto minmax(0,360px) 1fr}
+  .mebar .elo{justify-self:end}
+}
 </style>
 </head>
 <body>
@@ -430,31 +507,34 @@ details ol{font-weight:700}
     </button>
   </header>
 
-  <section id="lobby" class="stack">
-    <div class="lcol">
-    <div class="card stack">
-      <h2>Mon compte</h2>
-      <div class="me">
-        <label for="name">Mon nom<input id="name" maxlength="16" placeholder="Joueur" autocomplete="nickname"></label>
+  <section id="lobby">
+
+    <div class="card mebar" id="mebar">
+      <div class="mb-top">
+        <span class="mb-emb" id="rk-emb"></span>
+        <div class="mb-main">
+          <label for="name" class="fl">Mon nom</label>
+          <input id="name" maxlength="16" placeholder="Joueur" autocomplete="nickname">
+          <div class="rankline" id="rankline" hidden><div class="rk-txt"><b id="rk-name"></b><small id="rk-next"></small><div class="rk-bar"><i id="rk-fill"></i></div></div></div>
+        </div>
         <div class="elo" aria-live="polite"><small>Élo</small><span id="elo">…</span></div>
       </div>
-      <div class="rankline" id="rankline" hidden><span id="rk-emb"></span><div class="rk-txt"><b id="rk-name"></b><div class="rk-bar"><i id="rk-fill"></i></div><small id="rk-next"></small></div></div>
       <p class="note" id="pstats"></p>
-      <p class="note warn" id="nodur" hidden>Attention : ce serveur ne garde rien quand il redémarre ou s’endort. Ton Élo et tes parties seront perdus à ce moment-là. Pour les garder, il faut brancher une base gratuite (voir le README, « Garder les parties »).</p>
-      <div class="stack" id="notif" hidden>
-        <div class="row" style="align-items:center">
-          <p class="note" id="nstate" style="flex:1 1 200px"></p>
-          <button class="btn ghost small" id="nbtn"></button>
+      <p class="note warn" id="nodur" hidden>Ce serveur oublie tout quand il redémarre ou s’endort : ton Élo et tes parties seront perdus. Pour les garder, il faut brancher une base gratuite (voir le README, « Garder les parties »).</p>
+      <details class="more">
+        <summary>Notifications et récupération du compte</summary>
+        <div class="stack" id="notif" hidden>
+          <div class="row" style="align-items:center">
+            <p class="note" id="nstate" style="flex:1 1 200px"></p>
+            <button class="btn ghost small" id="nbtn"></button>
+          </div>
         </div>
-      </div>
-      <details>
-        <summary>Retrouver mon compte sur un autre appareil</summary>
         <p class="note">Ce code te redonne ton nom, ton Élo et toutes tes parties, avec ton côté. Garde-le, et ne le partage pas : il donne accès à ton compte.</p>
         <div class="rcode" id="rcode"></div>
         <div class="row">
           <button class="btn ghost small" id="rcopy">Copier mon code</button>
         </div>
-        <p class="note">Sur l’autre appareil, colle le code ici :</p>
+        <p class="note">Sur un autre appareil, colle le code ici :</p>
         <div class="row">
           <input id="rin" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" aria-label="Code de récupération" style="flex:1 1 220px">
           <button class="btn ghost small" id="ruse">Utiliser ce code</button>
@@ -463,50 +543,52 @@ details ol{font-weight:700}
       </details>
     </div>
 
-    <div class="card stack">
-      <h2>Mes parties</h2>
+    <div class="card major stack" id="gcard" hidden>
+      <h2>Mes parties <span class="badge" id="gbadge" hidden></span></h2>
       <div class="games" id="games"><p class="note">Connexion…</p></div>
     </div>
-    </div>
 
-    <div class="lcol">
-    <div class="card stack">
+    <div class="card major stack" id="ncard">
       <h2>Nouvelle partie</h2>
-      <div class="row">
-        <label for="opp">Adversaires
-          <select id="opp"><option value="friends" selected>Mes amis (salle d’attente)</option><option value="ai">L’ordinateur (IA)</option></select>
-        </label>
-        <label for="level" id="levelbox" hidden>Niveau de l’IA<select id="level"></select></label>
+      <div class="field">
+        <span class="fl">Adversaires</span>
+        <select id="opp" aria-label="Adversaires"><option value="friends" selected>Entre amis</option><option value="ai">Contre l’IA</option></select>
       </div>
-      <div class="row">
-        <label for="np">Joueurs
-          <select id="np"><option value="2" selected>2 joueurs</option><option value="4">4 joueurs</option><option value="6">6 joueurs</option><option value="8">8 joueurs</option></select>
-        </label>
-        <label for="size">Grille<select id="size"></select></label>
+      <div class="field" id="levelbox" hidden>
+        <label class="fl" for="level">Niveau de l’IA</label>
+        <select id="level"></select>
+        <small class="hint">Chaque niveau a un Élo fixe : battre plus fort que toi rapporte plus d’Élo.</small>
       </div>
-      <div class="row" id="moderow">
-        <label for="mode">Rythme
-          <select id="mode"><option value="live" selected>Rapide : tout le monde est là</option><option value="long">Longue durée : plusieurs jours</option></select>
-        </label>
-        <label for="hours" id="hoursbox" hidden>Temps par coup
-          <select id="hours"><option value="12">12 heures</option><option value="24" selected>24 heures</option><option value="48">48 heures</option><option value="72">72 heures</option></select>
-        </label>
+      <div class="row2">
+        <div class="field"><span class="fl">Joueurs</span><select id="np" aria-label="Joueurs"><option value="2" selected>2 joueurs</option><option value="4">4 joueurs</option><option value="6">6 joueurs</option><option value="8">8 joueurs</option></select></div>
+        <div class="field"><label class="fl" for="size">Grille</label><select id="size"></select></div>
       </div>
+      <details class="adv" id="adv">
+        <summary><span>Options</span><span class="advsum" id="advsum"></span></summary>
+        <div class="row" id="moderow">
+          <label for="mode">Rythme
+            <select id="mode"><option value="live" selected>Rapide : tout le monde est là</option><option value="long">Longue durée : plusieurs jours</option></select>
+          </label>
+          <label for="hours" id="hoursbox" hidden>Temps par coup
+            <select id="hours"><option value="12">12 heures</option><option value="24" selected>24 heures</option><option value="48">48 heures</option><option value="72">72 heures</option></select>
+          </label>
+        </div>
+        <label class="check" for="ranked"><input type="checkbox" id="ranked" checked> Partie classée (compte pour l’Élo)</label>
+        <label class="check" for="public" id="publicbox"><input type="checkbox" id="public" checked> Salle publique : visible dans la liste des salles ouvertes</label>
+        <label class="check" for="sudden" id="suddenbox" hidden><input type="checkbox" id="sudden"> Mort subite : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours</label>
+      </details>
       <p class="note" id="modenote"></p>
-      <label class="check" for="ranked"><input type="checkbox" id="ranked" checked> Partie classée (compte pour l’Élo)</label>
-      <label class="check" for="public" id="publicbox"><input type="checkbox" id="public" checked> Salle publique : visible dans la liste des salles ouvertes</label>
-      <label class="check" for="sudden" id="suddenbox" hidden><input type="checkbox" id="sudden"> Mort subite : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours</label>
       <p class="note" id="net">Connexion au jeu en ligne…</p>
-      <div class="row">
-        <button class="btn" id="create" disabled>Créer une partie en ligne</button>
+      <div class="actions">
+        <button class="btn" id="create" disabled>Créer une salle</button>
         <button class="btn ghost" id="local">Jouer sur le même écran</button>
       </div>
       <p class="note err" id="create-err"></p>
     </div>
 
-    <div class="card stack">
+    <div class="card minor stack" id="jcard">
       <h2>Rejoindre une partie</h2>
-      <div class="row">
+      <div class="row" style="align-items:center">
         <input id="code" class="code-in" maxlength="4" placeholder="CODE" aria-label="Code de la partie" autocomplete="off" style="flex:1 1 120px">
         <button class="btn ghost" id="join" disabled>Rejoindre</button>
       </div>
@@ -514,14 +596,13 @@ details ol{font-weight:700}
       <h3 class="sub">Salles ouvertes</h3>
       <div class="games" id="rooms"><p class="note">Recherche…</p></div>
     </div>
-    </div>
 
     <details id="topbox">
       <summary>Classement</summary>
       <ol class="top" id="top"></ol>
       <p class="note" id="topnote"></p>
     </details>
-    <details>
+    <details id="rulesbox">
       <summary>Règles</summary>
       <ol>
         <li>Chaque joueur commence avec un point sur une case, de 2 à 8 joueurs. Les départs sont placés pour que chacun ait la même surface autour de lui ; la place de chacun et le premier joueur sont tirés au sort à chaque partie.</li>
@@ -1156,15 +1237,21 @@ function renderProfile(p){
 }
 Net.on('profile',renderProfile);
 function renderGames(list,skewNow){
+  list=list.filter(s=>s.status!=='done');
   const box=$('#games'); box.textContent='';
   lobbyMine=list.filter(s=>s.status==='playing'&&s.turn===s.me).length;
+  $('#gcard').hidden=!list.length;
+  const gb=$('#gbadge'); gb.hidden=!lobbyMine; gb.textContent=lobbyMine>1?`${lobbyMine} à toi`:'à toi';
   if(!list.length){ const p=document.createElement('p'); p.className='note'; p.textContent='Aucune partie pour l’instant. Crée-en une ou rejoins un ami avec son code.'; box.append(p); updateTitle(); return; }
+  const rank=s=>s.status==='playing'&&s.turn===s.me?0:s.status==='playing'?1:s.status==='waiting'?2:3;
+  list=list.map((s,i)=>[s,i]).sort((a,b)=>rank(a[0])-rank(b[0])||a[1]-b[1]).map(x=>x[0]);     // d'abord les parties où c'est ton tour
   for(const s of list){
     const mineTurn=s.status==='playing'&&s.turn===s.me;
     const b=document.createElement('button'); b.className='gitem'+(mineTurn?' mine':''); b.style.setProperty('--pc',`var(--p${Math.max(0,s.me)})`);
-    b.innerHTML=`<span class="sw" data-sh="${Math.max(0,s.me)}"></span><span class="gi"><span class="g1"></span><span class="g2"></span></span>`;
+    b.innerHTML=`<span class="sw" data-sh="${Math.max(0,s.me)}"></span><span class="gi"><span class="g1"></span><span class="g2"></span><span class="g3"></span></span>`;
     const kind=s.status==='waiting'?'Salle':(s.ai&&s.humans<=1)?'Contre l’IA':s.teams?'Par équipes':s.mode==='long'?'Longue durée':'Rapide';
-    b.querySelector('.g1').textContent=`Partie ${s.code} · ${kind}${s.ai&&s.humans>1?' + IA':''} · ${s.np} joueurs · ${s.n}×${s.n}`;
+    b.querySelector('.g1').textContent=`Partie ${s.code} · ${kind}${s.ai&&s.humans>1?' + IA':''}`;
+    b.querySelector('.g3').textContent=`${s.np} joueurs · ${s.n}×${s.n}`;
     const left=s.deadline?fmtLeft(s.deadline-(Date.now()+skewNow)):'';
     let t;
     if(s.status==='waiting') t=`Salle d’attente · ${s.filled}/${s.np} places prises`;
@@ -1383,7 +1470,7 @@ function fillSizes(){
 }
 function fillLevels(){
   const bots=(Net.features&&Net.features.bots)||[], sel=$('#level');
-  const has=bots.length>0; $('#opp').querySelector('option[value="ai"]').disabled=!has;
+  const has=bots.length>0; $('#opp').querySelector('option[value="ai"]').disabled=!has; if(typeof syncOpp==='function') syncOpp();
   if(!has||sel.options.length) return;
   const mine=(Net.profile&&Net.profile.elo)||1000;
   let best=bots[0]; bots.forEach(b=>{ if(Math.abs(b.elo-mine)<Math.abs(best.elo-mine)) best=b; });   // niveau proche de ton Élo par défaut
@@ -1395,16 +1482,39 @@ function updateModeNote(){
   $('#levelbox').hidden=!ai; $('#moderow').hidden=ai; $('#hoursbox').hidden=!long; $('#publicbox').hidden=ai;
   $('#create').textContent=ai?'Jouer contre l’IA':'Créer une salle';
   let t;
-  if(ai) t='Tu joues tout de suite, sans attendre personne, et tu peux fermer la page : la partie reste dans « Mes parties ». Chaque niveau d’IA a un Élo fixe : battre un niveau plus fort que toi rapporte plus, et un niveau bien plus faible presque rien. ';
+  if(ai) t='Tu joues tout de suite, sans attendre personne. Tu peux fermer la page : la partie reste dans « Mes parties ».';
   else{
-    t='Tu arrives dans une salle d’attente : tu y règles la partie, tu invites tes amis, tu ajoutes des IA et tu formes des équipes. ';
-    t+=long?'Chaque joueur a le temps choisi pour jouer son coup, puis tu peux fermer la page. Un joueur qui dépasse le délai est éliminé. Retrouve tes parties plus haut, dans « Mes parties ».':'Tout le monde joue en direct. Si quelqu’un ne répond plus, les autres peuvent l’éliminer au bout de 45 secondes.';
-    if(long&&online&&Net.features&&Net.features.durable===false) t+=' Attention : ce serveur ne garde pas les parties s’il redémarre ou s’endort, une partie longue risque d’être perdue (voir le README, section « Garder les parties »).';
+    t=long?'Chaque joueur a le temps choisi pour jouer son coup, et tu peux fermer la page. Un joueur qui dépasse le délai est éliminé.':'Tu arrives dans une salle d’attente : tu invites tes amis, tu peux ajouter des IA et former des équipes.';
+    if(long&&online&&Net.features&&Net.features.durable===false) t+=' Attention : ce serveur ne garde pas les parties s’il redémarre ou s’endort, une partie longue risque d’être perdue (voir le README, « Garder les parties »).';
   }
   $('#modenote').textContent=t;
+  updateAdvSum();
 }
-function updateSudden(){ $('#suddenbox').hidden=(+$('#np').value||2)<=4; }
+function updateAdvSum(){
+  const ai=$('#opp').value==='ai', bits=[];
+  if(!ai) bits.push($('#mode').value==='long'?'longue durée':'rapide');
+  bits.push($('#ranked').checked?'classée':'amicale');
+  if(!ai) bits.push($('#public').checked?'publique':'privée');
+  if(!$('#suddenbox').hidden&&$('#sudden').checked) bits.push('mort subite');
+  $('#advsum').textContent=bits.join(' · ');
+}
+/* boutons à choix : le <select> reste la source de vérité, il est juste masqué */
+function seg(sel,labels){
+  const wrap=document.createElement('div'); wrap.className='seg'; wrap.setAttribute('role','radiogroup'); wrap.setAttribute('aria-label',sel.getAttribute('aria-label')||'');
+  [...sel.options].forEach((o,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.setAttribute('role','radio'); b.dataset.v=o.value; b.textContent=labels[i]||o.textContent;
+    b.addEventListener('click',()=>{ if(sel.value===o.value) return; sel.value=o.value; sel.dispatchEvent(new Event('change',{bubbles:true})); });
+    wrap.append(b);
+  });
+  sel.classList.add('sr'); sel.tabIndex=-1; sel.setAttribute('aria-hidden','true'); sel.before(wrap);
+  const sync=()=>[...wrap.children].forEach(b=>{ const o=[...sel.options].find(x=>x.value===b.dataset.v); const on=sel.value===b.dataset.v; b.classList.toggle('on',on); b.setAttribute('aria-checked',String(on)); b.disabled=!o||o.disabled; });
+  sel.addEventListener('change',sync); sync();
+  return sync;
+}
+const syncOpp=seg($('#opp'),['Entre amis','Contre l’IA']), syncNp=seg($('#np'),['2','4','6','8']);
+function updateSudden(){ $('#suddenbox').hidden=(+$('#np').value||2)<=4; updateAdvSum(); }
 $('#np').addEventListener('change',()=>{ fillSizes(); updateSudden(); });
+['#ranked','#public','#sudden'].forEach(id=>$(id).addEventListener('change',updateAdvSum));
 updateSudden();
 $('#mode').addEventListener('change',updateModeNote);
 $('#opp').addEventListener('change',updateModeNote);
@@ -1437,7 +1547,7 @@ window.addEventListener('hashchange',()=>{          // un lien collé dans un on
 fillSizes(); updateModeNote();
 $('#name').value=ls.get('propagation:name')||'';
 Net.on('state',st=>{
-  if(st==='ready'){ online=true; fillLevels(); Notif.sync(); sendVis(); $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.'; busy(false); updateModeNote(); renderProfile(Net.profile); }
+  if(st==='ready'){ online=true; fillLevels(); Notif.sync(); sendVis(); $('#net').textContent=''; busy(false); updateModeNote(); renderProfile(Net.profile); }
   else if(st==='down'){ online=false; Notif.render(); busy(false); $('#net').textContent='Connexion perdue, reconnexion…'; }
   else if(st==='authfail'){ online=false; busy(false); $('#net').textContent='Compte non reconnu par le serveur. Utilise ton code de récupération.'; }
 });

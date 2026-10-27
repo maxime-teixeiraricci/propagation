@@ -628,7 +628,7 @@ const OPS = {
     const now = Date.now(), list = [];
     for (const g of games.values()) {
       if (!g.players.includes(c.pid)) continue;
-      if (g.status === 'done' && (now - g.updated > 7 * DAY || (g.seen || []).includes(c.pid))) continue;
+      if (g.status === 'done') continue;               // « Mes parties » ne montre que les parties à reprendre
       list.push(summary(g, c.pid));
     }
     const mine = x => (x.status === 'playing' && x.turn === x.me ? 1 : 0);
