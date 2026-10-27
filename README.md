@@ -10,7 +10,7 @@ Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles
 - **Rapide** : tout le monde est connecté. Si quelqu'un ne joue plus pendant 45 secondes, les autres peuvent l'éliminer.
 - **Longue durée** : chaque joueur a 12, 24, 48 ou 72 heures par coup. On peut fermer la page entre deux coups. Un joueur qui dépasse son délai est éliminé.
 - Départs équitables : à 2, 4 et 8 joueurs, les départs sont symétriques ; à 6 joueurs, chacun a la même surface à une case près. La place de chacun et le premier joueur sont tirés au sort.
-- Le créateur peut lancer la partie avant qu'elle soit pleine (« Lancer maintenant »), « Abandonner » est possible à tout moment, « Revanche » relance avec les mêmes joueurs.
+- « Abandonner » est possible à tout moment, « Revanche » relance avec les mêmes joueurs (et les mêmes équipes et IA).
 
 ## Compte, parties et Élo
 
@@ -19,9 +19,19 @@ Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles
 - **Code de récupération** : dans « Mon compte », un code de 30 caractères redonne ton compte (nom, Élo, parties) sur un autre appareil. Il donne accès au compte : ne le partage pas.
 - **Élo** : tout le monde commence à 1000, K = 32. Chaque paire de joueurs compte comme un duel selon le rang final (à N joueurs, chaque duel pèse K/(N-1)). Seules les parties « classées » dont toutes les places sont prises par des comptes différents comptent. Classement des 20 premiers dans le salon.
 
+## Salle d'attente et équipes
+
+- « Créer une salle » ouvre une salle d'attente avec un code et un lien. Le créateur y règle la partie (joueurs, grille, rythme, partie classée, équipes) et lance quand il veut ; les autres voient les réglages et choisissent leur place.
+- **IA dans la salle** : sur chaque place libre, le créateur peut ajouter une IA du niveau voulu (ou « Compléter » toutes les places libres). Si un ami arrive alors que toutes les places sont prises par des IA, il prend la place d'une IA. Avec 3 amis dans une salle à 4, ajoute une IA et lance.
+- Sans équipes, les places vides sont retirées au lancement (3 occupants = partie à 3 joueurs, départs un peu moins symétriques qu'à 2, 4, 6 ou 8).
+- **Équipes** : 2 équipes (2 contre 2, 3 contre 3, 4 contre 4), 3 équipes de 2 ou 4 équipes de 2. Les équipes sont formées par les places (A, B, A, B…, ce qui garde des départs équitables) : en choisissant ta place, tu choisis ton équipe. Toutes les places doivent être prises (complète avec des IA).
+- Règles d'équipe : tu ajoutes toujours un point sur *tes* cases. Quand une case déborde, les cases d'un coéquipier reçoivent le point mais **restent à leur propriétaire** ; les cases adverses et vides passent de ton côté. Un joueur sans case est éliminé, son équipe continue. Une équipe gagne quand toutes les cases restantes sont à ses membres.
+- Élo en équipe : chaque équipe est comptée avec l'Élo moyen de ses joueurs, et tous les joueurs d'une équipe gagnent ou perdent la même chose. Les IA gardent leur Élo fixe.
+- Les IA jouent en équipe avec leurs coéquipiers (humains ou IA). Dans une partie avec IA, si plus aucun humain n'est en jeu (tous abandonnent ou sont éliminés), la partie s'arrête.
+
 ## Jouer contre l'ordinateur
 
-- Dans « Nouvelle partie », choisis « L'ordinateur (IA) », un niveau, le nombre de joueurs (2 : toi contre une IA ; 4, 6 ou 8 : toi contre 3, 5 ou 7 IA du même niveau) et la grille. La partie démarre tout de suite, sans délai, et reste dans « Mes parties ».
+- Dans « Nouvelle partie », choisis « L'ordinateur (IA) », un niveau, le nombre de joueurs (2 : toi contre une IA ; 4, 6 ou 8 : toi contre 3, 5 ou 7 IA du même niveau) et la grille. La partie démarre tout de suite, sans salle d'attente, et reste dans « Mes parties ».
 - 11 niveaux, du Novice (coups au hasard) au Grand maître (qui regarde aussi ta réponse avant de jouer). Les niveaux se distinguent par la réflexion et une part de coups au hasard, de plus en plus faible.
 - Chaque niveau a un **Élo fixe**, affiché dans la liste : il ne bouge jamais. Une partie classée contre l'IA modifie ton Élo comme contre un joueur de ce niveau : battre un niveau plus fort que toi rapporte plus, battre un niveau bien plus faible presque rien. Décoche « Partie classée » pour jouer sans enjeu.
 - Ces Élo ont été mesurés par des parties entre les IA (1 contre 1, grille 8 × 8, 250 parties entre niveaux voisins, places et premier joueur tirés au sort). L'échelle est calée en donnant 1000 au niveau « Amateur » : ce sont des repères entre IA, pas une mesure sur de vrais joueurs. À 4 joueurs ou plus, ces Élo restent une estimation.
