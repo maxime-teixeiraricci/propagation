@@ -10,20 +10,23 @@ La même page s'adapte à l'écran. Sur ordinateur (fenêtre assez large), l'acc
 
 ## Modes
 
-- 2, 4, 6 ou 8 joueurs, chacun pour soi. Chaque joueur a une couleur et une forme de point.
+- 2, 4, 6 ou 8 joueurs, chacun pour soi. Grilles proposées : 5, 6 ou 8 (2 joueurs), 6, 8 ou 10 (4), 9, 10 ou 12 (6), 10, 12 ou 14 (8) ; la taille par défaut est la deuxième de la liste (6, 8, 10 ou 12). Sur ordinateur, la grille est plafonnée à 620 pixels. Chaque joueur a une couleur et une forme de point.
 - **Rapide** : tout le monde est connecté. Si quelqu'un ne joue plus pendant 45 secondes, les autres peuvent l'éliminer.
 - **Longue durée** : chaque joueur a 12, 24, 48 ou 72 heures par coup. On peut fermer la page entre deux coups. Un joueur qui dépasse son délai est éliminé.
 - **Mort subite** (option, à 6 et 8 joueurs) : à partir du 30e tour (un tour = chaque joueur a joué une fois), puis tous les 5 tours, le bord de la grille disparaît. Le compte à rebours est affiché sous le statut ; dans les 5 derniers tours avant un rétrécissement, l'anneau qui va disparaître est entouré en pointillés rouges. Les points qui s'y trouvent sont détruits, ces cases ne peuvent plus être jouées et les débordements qui y arrivent sont perdus. Un joueur qui n'a plus de case est éliminé. Il reste toujours un carré de 2×2 ou 3×3 au centre. À cocher dans « Nouvelle partie » ou dans la salle d'attente (partie contre l'IA et « même écran » compris). Les IA ne tiennent pas compte du rétrécissement à venir : elles peuvent perdre des cases dessus.
-- Départs équitables : à 2, 4 et 8 joueurs, les départs sont symétriques ; à 6 joueurs, chacun a la même surface à une case près. La place de chacun et le premier joueur sont tirés au sort.
+- Départs équitables : à 2, 4 et 8 joueurs, les départs sont symétriques ; à 6 joueurs, chacun a la même surface à une case près (exactement la même en 9 × 9). La place de chacun et le premier joueur sont tirés au sort.
 - Pendant la partie, les joueurs sont classés par nombre de points (numéro à gauche de chaque carte ; à égalité, même rang). En équipe, le classement est celui des équipes. Les joueurs éliminés passent en dernier ; à la fin, l'ordre final de la partie.
 - « Abandonner » est possible à tout moment, « Revanche » relance avec les mêmes joueurs (et les mêmes équipes et IA).
 
 ## Compte, parties et Élo
 
 - Au premier passage, le navigateur crée un compte automatiquement, sans inscription. Il est gardé sur l'appareil.
-- « Mes parties » liste toutes tes parties avec ton côté : on y reprend là où on s'était arrêté, même après avoir fermé la page. Ton titre d'onglet indique quand c'est ton tour.
+- « Mes parties » liste tes parties en cours et en attente avec ton côté : on y reprend là où on s'était arrêté, même après avoir fermé la page. Une partie terminée n'y reste que tant que tu n'as pas vu son résultat (par exemple une partie longue qui s'est terminée pendant ton absence) ; une fois ouverte, elle disparaît de la liste. Ton titre d'onglet indique quand c'est ton tour.
 - **Code de récupération** : dans « Mon compte », un code de 30 caractères redonne ton compte (nom, Élo, parties) sur un autre appareil. Il donne accès au compte : ne le partage pas.
 - **Élo** : tout le monde commence à 1000, K = 32. Chaque paire de joueurs compte comme un duel selon le rang final (à N joueurs, chaque duel pèse K/(N-1)). Seules les parties « classées » dont toutes les places sont prises par des comptes différents comptent. Classement des 20 premiers dans le salon.
+
+- **Rangs** : 15 rangs en 3 paliers de 5, du plus bas au plus haut. Matières : Pierre, Cuivre, Bronze, Argent, Or. Gemmes : Jade, Émeraude, Rubis, Saphir, Diamant. Maîtres : Master, Grand Master, Mythic Master, Eternal Master, Infinite Master X. Chaque rang couvre 80 points d'Élo : Pierre jusqu'à 789, Cuivre à partir de 790, Argent à 950, Or à 1030, Diamant à 1430, Master à 1510, Infinite Master X à partir de 1830. Un nouveau joueur (1000) démarre au milieu d'Argent. L'écusson et la barre de progression sont dans « Mon compte » ; on les voit aussi dans le classement et sur les cartes des joueurs (les IA ont aussi un rang, d'après leur Élo fixe : du Novice, Pierre, au Grand maître, Infinite Master X).
+- **Rituel de fin de partie classée** : à la fin d'une partie classée, une cérémonie s'ouvre : résultat, compteur d'Élo, écusson et barre de progression qui s'animent, avec « Promotion ! » et des confettis quand on monte de rang, ou « Relégation » quand on descend. Elle ne se rejoue pas pour une même partie (« Continuer » ou Échap pour fermer). Les animations sont coupées si ton appareil demande de réduire les animations.
 
 ## Salle d'attente et équipes
 

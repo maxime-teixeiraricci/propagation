@@ -263,7 +263,7 @@ function eliminate(g, seat) {              // abandon, absence ou délai dépass
 }
 function resetBoard(g, np) {
   const b = E.newBoard(g.n, np, rnd(np));
-  g.np = np; g.o = b.o; g.c = b.c; g.dead = 0; g.round = 0; if (np <= 4) g.sudden = false; g.turn = rnd(np); g.last = null; g.winner = -1; g.elim = []; g.result = null;
+  g.np = np; g.o = b.o; g.c = b.c; g.dead = 0; g.round = 0; g.seen = []; if (np <= 4) g.sudden = false; g.turn = rnd(np); g.last = null; g.winner = -1; g.elim = []; g.result = null;
 }
 function joinSeat(g, pid) {
   let idx = g.players.indexOf(pid);
@@ -380,8 +380,14 @@ function dueFor(endpoint) {
 /* ======================= connexions ======================= */
 const prof = p => ({ name: p.name, elo: p.elo, games: p.games, wins: p.wins });
 function send(c, obj) { sendRaw(c, 1, Buffer.from(JSON.stringify(obj))); }
+// Une partie terminée disparaît de « Mes parties » dès que le joueur en a vu le résultat.
+function markSeen(g, pid) {
+  if (g.status !== 'done' || !pid || !g.players.includes(pid)) return;
+  g.seen = g.seen || [];
+  if (!g.seen.includes(pid)) { g.seen.push(pid); markG(g); }
+}
 function pushGame(g) {
-  for (const c of clients) if (c.pid && c.subs.has(g.code)) send(c, { t: 'game', code: g.code, g: viewFor(g, c.pid), now: Date.now() });
+  for (const c of clients) if (c.pid && c.subs.has(g.code)) { markSeen(g, c.pid); send(c, { t: 'game', code: g.code, g: viewFor(g, c.pid), now: Date.now() }); }
   notifyTurn(g);
   scheduleBot(g);
 }
@@ -459,6 +465,7 @@ const OPS = {
     if (!CODE_RE.test(code)) throw new Err('invalid');
     c.subs.add(code);
     const g = games.get(code);
+    if (g) markSeen(g, c.pid);
     send(c, { t: 'game', code, g: g ? viewFor(g, c.pid) : null, now: Date.now() });
     return {};
   },
@@ -621,7 +628,7 @@ const OPS = {
     const now = Date.now(), list = [];
     for (const g of games.values()) {
       if (!g.players.includes(c.pid)) continue;
-      if (g.status === 'done' && now - g.updated > 7 * DAY) continue;
+      if (g.status === 'done' && (now - g.updated > 7 * DAY || (g.seen || []).includes(c.pid))) continue;
       list.push(summary(g, c.pid));
     }
     const mine = x => (x.status === 'playing' && x.turn === x.me ? 1 : 0);

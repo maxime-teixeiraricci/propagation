@@ -27,15 +27,17 @@
   // 6 joueurs : aucune symétrie parfaite n'existe sur une grille carrée ; ces placements donnent à chacun
   // la même surface (à une case près), la même distance au plus proche adversaire, et le même recul au bord.
   const LAYOUTS = {
+    '6-9': [[1, 1], [4, 1], [7, 1], [7, 7], [4, 7], [1, 7]],          // surfaces rigoureusement égales
     '6-10': [[2, 2], [5, 2], [7, 4], [7, 7], [4, 7], [2, 5]],
     '6-12': [[4, 1], [7, 1], [10, 6], [10, 9], [1, 9], [1, 6]],
     '6-14': [[1, 5], [5, 1], [11, 2], [12, 8], [8, 12], [2, 11]],
+    '8-10': [[1, 3], [3, 1], [6, 1], [8, 3], [8, 6], [6, 8], [3, 8], [1, 6]],   // orbite complète : surfaces rigoureusement égales
     '8-12': [[2, 4], [4, 2], [7, 2], [9, 4], [9, 7], [7, 9], [4, 9], [2, 7]],
     '8-14': [[3, 5], [5, 3], [8, 3], [10, 5], [10, 8], [8, 10], [5, 10], [3, 8]],
     '8-16': [[4, 6], [6, 4], [9, 4], [11, 6], [11, 9], [9, 11], [6, 11], [4, 9]]
   };
   // Nombre de joueurs -> tailles de grille proposées (les trois premières) et taille par défaut (la quatrième).
-  const SIZES = { 2: [6, 8, 10, 8], 4: [8, 10, 12, 10], 6: [10, 12, 14, 12], 8: [12, 14, 16, 14] };
+  const SIZES = { 2: [5, 6, 8, 6], 4: [6, 8, 10, 8], 6: [9, 10, 12, 10], 8: [10, 12, 14, 12] };
 
   function startCells(n, np) {
     const t = LAYOUTS[np + '-' + n];
@@ -165,7 +167,22 @@
     return d.map(Math.round);
   }
 
-  const api = { neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
+  // Rangs : 15 rangs en 3 paliers de 5, de « Pierre » à « Infinite Master X ». Chaque rang couvre 80 points d'Élo.
+  // Un nouveau joueur (Élo 1000) démarre au milieu d'Argent.
+  const RANK_TIERS = ['Matières', 'Gemmes', 'Maîtres'];
+  const RANK_NAMES = ['Pierre', 'Cuivre', 'Bronze', 'Argent', 'Or', 'Jade', 'Émeraude', 'Rubis', 'Saphir', 'Diamant',
+    'Master', 'Grand Master', 'Mythic Master', 'Eternal Master', 'Infinite Master X'];
+  const RANK_FLOORS = [100, 790, 870, 950, 1030, 1110, 1190, 1270, 1350, 1430, 1510, 1590, 1670, 1750, 1830];
+  function rankOf(elo) {
+    elo = Math.max(RANK_FLOORS[0], Math.round(Number(elo) || 0));
+    let k = 0;
+    for (let i = 0; i < RANK_FLOORS.length; i++) if (elo >= RANK_FLOORS[i]) k = i;
+    const lo = RANK_FLOORS[k], hi = k + 1 < RANK_FLOORS.length ? RANK_FLOORS[k + 1] : null;
+    return { index: k, tier: Math.floor(k / 5), tierName: RANK_TIERS[Math.floor(k / 5)], pos: k % 5 + 1, name: RANK_NAMES[k],
+      lo, hi, progress: hi ? (elo - lo) / (hi - lo) : 1, toNext: hi ? hi - elo : 0, nextName: k + 1 < RANK_NAMES.length ? RANK_NAMES[k + 1] : null };
+  }
+
+  const api = { RANK_TIERS, RANK_NAMES, RANK_FLOORS, rankOf, neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Engine = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -91,6 +91,41 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
 /* mes parties */
 .games{display:flex; flex-direction:column; gap:8px}
 h3.sub{font:600 15px/1.2 var(--display); margin:6px 0 0}
+/* rangs */
+.emb{display:inline-block; vertical-align:middle; flex:none}
+.rankline{display:flex; align-items:center; gap:12px}
+.rankline .rk-txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:5px}
+.rankline b{font:600 17px/1.1 var(--display)}
+.rk-bar{height:8px; border-radius:99px; background:var(--cell); border:1px solid var(--line); overflow:hidden}
+.rk-bar i{display:block; height:100%; width:0; background:var(--rkc,var(--p0)); border-radius:99px; transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.rankline small{color:var(--muted); font-size:13px}
+.top .emb{margin:-3px 0}
+.pl .rt .emb{width:14px; height:17px; margin:-3px 3px -3px 0}
+.ritual{position:fixed; inset:0; z-index:50; display:grid; place-items:center; padding:16px; background:rgba(8,12,18,.74); backdrop-filter:blur(4px); animation:rtfade .3s ease both}
+.ritual canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+.rt-card{position:relative; width:min(100%,380px); background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px 22px 22px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.rt-kicker{margin:0; font:500 12px var(--body); letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.rt-card h2{margin:0; font:700 30px/1.1 var(--display); letter-spacing:-.02em}
+.rt-sub{margin:0; color:var(--muted); font-size:15px}
+.rt-badge{height:128px; display:grid; place-items:center; margin-top:4px}
+.rt-badge .emb{height:128px; width:auto}
+.rt-badge.pop .emb{animation:rtpop .8s cubic-bezier(.2,1.4,.4,1) both}
+.rt-badge.drop .emb{animation:rtdrop .6s ease both}
+.rt-name{font:700 22px/1.1 var(--display)}
+.rt-banner{min-height:1.4em; font:700 15px/1.3 var(--display); letter-spacing:.06em; text-transform:uppercase}
+.rt-banner.promo{color:#D49A00}
+.rt-banner.relega{color:var(--muted)}
+.rt-elo{display:flex; align-items:baseline; gap:10px; font:700 34px/1 var(--display); font-variant-numeric:tabular-nums}
+.rt-delta{font:600 18px var(--mono); opacity:0; transition:opacity .4s}
+.rt-delta.on{opacity:1}
+.rt-delta.up{color:#16a06f} .rt-delta.down{color:var(--danger)}
+.rt-card .rk-bar{width:100%}
+.rt-next{margin:0; color:var(--muted); font-size:14px; min-height:1.3em}
+@keyframes rtfade{from{opacity:0}to{opacity:1}}
+@keyframes rtpop{0%{transform:scale(.3) rotate(-14deg); opacity:0}60%{transform:scale(1.18) rotate(4deg); opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes rtdrop{0%{transform:translateY(-14px); opacity:.2}60%{transform:translateY(4px)}100%{transform:none; opacity:1}}
+@media (prefers-reduced-motion: reduce){ .ritual,.rt-badge .emb{animation:none!important} .rk-bar i{transition:none} }
+
 .gitem{
   display:flex; align-items:center; gap:12px; text-align:left; width:100%; font:inherit; color:inherit; cursor:pointer;
   background:var(--cell); border:1.5px solid var(--line); border-radius:9px; padding:10px 12px;
@@ -204,7 +239,7 @@ h3.sub{font:600 15px/1.2 var(--display); margin:6px 0 0}
   #lobby{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px 24px; align-items:start}
   .lcol{display:flex; flex-direction:column; gap:12px; min-width:0}
   #lobby > details{grid-column:1 / -1}
-  #game{--bw:min(calc(100vw - 440px), max(380px, calc(100vh - 150px))); display:grid; grid-template-columns:var(--bw) 360px; justify-content:center; grid-template-rows:auto 1fr; column-gap:28px; row-gap:14px; align-items:start}
+  #game{--bw:min(calc(100vw - 440px), 620px, max(360px, calc(100vh - 190px))); display:grid; grid-template-columns:var(--bw) 360px; justify-content:center; grid-template-rows:auto 1fr; column-gap:28px; row-gap:14px; align-items:start}
   .ginfo{display:flex; flex-direction:column; gap:12px; grid-column:2; grid-row:1; min-width:0}
   #game > .foot{grid-column:2; grid-row:2}
   #game > .board{grid-column:1; grid-row:1 / span 2; width:100%}
@@ -232,6 +267,7 @@ h3.sub{font:600 15px/1.2 var(--display); margin:6px 0 0}
         <label for="name">Mon nom<input id="name" maxlength="16" placeholder="Joueur" autocomplete="nickname"></label>
         <div class="elo" aria-live="polite"><small>Élo</small><span id="elo">…</span></div>
       </div>
+      <div class="rankline" id="rankline" hidden><span id="rk-emb"></span><div class="rk-txt"><b id="rk-name"></b><div class="rk-bar"><i id="rk-fill"></i></div><small id="rk-next"></small></div></div>
       <p class="note" id="pstats"></p>
       <p class="note warn" id="nodur" hidden>Attention : ce serveur ne garde rien quand il redémarre ou s’endort. Ton Élo et tes parties seront perdus à ce moment-là. Pour les garder, il faut brancher une base gratuite (voir le README, « Garder les parties »).</p>
       <div class="stack" id="notif" hidden>
@@ -371,12 +407,28 @@ h3.sub{font:600 15px/1.2 var(--display); margin:6px 0 0}
   </section>
 
   <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+  <div class="ritual" id="ritual" role="dialog" aria-modal="true" aria-labelledby="rt-title" hidden>
+    <canvas id="rt-fx" aria-hidden="true"></canvas>
+    <div class="rt-card">
+      <p class="rt-kicker">Partie classée terminée</p>
+      <h2 id="rt-title"></h2>
+      <p class="rt-sub" id="rt-sub"></p>
+      <div class="rt-badge" id="rt-badge"></div>
+      <div class="rt-name" id="rt-name"></div>
+      <div class="rt-banner" id="rt-banner"></div>
+      <div class="rt-elo"><span id="rt-elo"></span><span class="rt-delta" id="rt-delta"></span></div>
+      <div class="rk-bar"><i id="rt-fill"></i></div>
+      <p class="rt-next" id="rt-next"></p>
+      <button class="btn" id="rt-ok">Continuer</button>
+    </div>
+  </div>
 </main>
 
 <script src="engine.js"></script>
 <script>
 (()=>{
-const {newBoard,simulate,step,nextTurn,tally,SIZES,ring,maxDead,SUDDEN_EVERY,suddenLeft}=window.Engine;
+const {newBoard,simulate,step,nextTurn,tally,SIZES,ring,maxDead,SUDDEN_EVERY,suddenLeft,rankOf}=window.Engine;
 const LETTERS='ABCD';
 const $=s=>document.querySelector(s);
 const NAMES=['Bleu','Orange','Vert','Rose','Rouge','Cyan','Violet','Gris'];
@@ -478,6 +530,26 @@ function fmtLeft(ms){
 }
 const fmtTurn=ms=>{ const h=Math.round(ms/3600000); return ms<3600000?`${Math.round(ms/1000)} s`:(h>=24&&h%24===0?`${h/24} j`:`${h} h`); };
 const ord=r=>r===1?'1er':r+'e';
+
+/* ---------- rangs ---------- */
+// Écusson d'un rang : 15 couleurs, un symbole par palier (chevrons, gemme, étoile), et 5 points qui montrent la place dans le palier.
+const RCOL=['#8B9096','#D2763A','#A86B2E','#A9B4C0','#E0A400','#55C2A2','#2E9E5B','#D6334A','#3B6FE0','#5CD0F2','#8E5CF2','#C13DD6','#F0603A','#1E2347','#7B61FF'];
+const mixc=(hex,t,to)=>{ const v=parseInt(hex.slice(1),16); return '#'+[v>>16&255,v>>8&255,v&255].map(c=>Math.round(c+(to-c)*t).toString(16).padStart(2,'0')).join(''); };
+function emblem(elo,h){
+  const r=rankOf(elo), k=r.index, j=r.pos-1, base=RCOL[k], inf=k===14, eter=k===13;
+  const light=eter?'#FFD866':inf?'#FFFFFF':mixc(base,.62,255), dark=mixc(base,.5,0);
+  const chev=y=>`<path d="M15 ${y+6} L24 ${y} L33 ${y+6}" fill="none" stroke="${light}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  let glyph;
+  if(r.tier===0) glyph=chev(18)+chev(28);
+  else if(r.tier===1) glyph=`<polygon points="24,14 34.5,24 24,38 13.5,24" fill="${light}"/><path d="M13.5 24H34.5M24 14L19.5 24L24 38L28.5 24Z" fill="none" stroke="${base}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  else if(inf) glyph=`<path d="M11 26 C11 17 20 17 24 26 C28 35 37 35 37 26 C37 17 28 17 24 26 C20 35 11 35 11 26 Z" fill="none" stroke="${light}" stroke-width="3.6" stroke-linejoin="round"/>`;
+  else glyph=`<polygon points="24,15 26.9,21.8 34.3,22.4 28.7,27.3 30.4,34.5 24,30.7 17.6,34.5 19.3,27.3 13.7,22.4 21.1,21.8" fill="${light}"/>`+[0,1,2].filter(i=>i<j).map(i=>`<circle cx="24" cy="26" r="${12+i*3}" fill="none" stroke="${light}" stroke-width="1.3" opacity="${.9-i*.2}"/>`).join('');
+  const fill=inf?'url(#gInf)':base, stroke=eter?'#D9A93A':inf?'#2A2060':dark, pipc=eter?'#D9A93A':base;
+  const defs=inf?'<defs><linearGradient id="gInf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF6B6B"/><stop offset=".35" stop-color="#FFD93D"/><stop offset=".65" stop-color="#4ADE80"/><stop offset="1" stop-color="#7B61FF"/></linearGradient></defs>':'';
+  const pips=[0,1,2,3,4].map(i=>`<circle cx="${8+i*8}" cy="58" r="2.3" fill="${inf?'#7B61FF':pipc}" ${i<=j?'':'opacity=".25"'}/>`).join('');
+  return `<svg class="emb" viewBox="0 0 48 64" ${h?`height="${h}" width="${Math.round(h*.75)}"`:''} role="img" aria-label="${r.name}">${defs}<path d="M24 2 L43 9 V28 C43 40 34 48 24 52 C14 48 5 40 5 28 V9 Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><path d="M24 2 L43 9 V28 C43 31 42 34 41 36 C34 30 14 30 7 36 C6 34 5 31 5 28 V9 Z" fill="#fff" opacity=".22"/>${glyph}${pips}</svg>`;
+}
+const rankColor=elo=>RCOL[rankOf(elo).index];
 
 /* ---------- plateau ---------- */
 function buildBoard(size){
@@ -600,7 +672,8 @@ function renderMeta(){
   $('#players').innerHTML=h;
   [...$('#players').children].forEach((el,i)=>{
     el.querySelector('.nm').textContent=names[i]+(isOnline&&me===i?' (toi)':'');
-    el.querySelector('.rt').textContent=showRating&&remote.seats[i].filled&&remote.seats[i].rating!=null?remote.seats[i].rating:'';
+    const rt=el.querySelector('.rt'); rt.textContent='';
+    if(showRating&&remote.seats[i].filled&&remote.seats[i].rating!=null){ rt.insertAdjacentHTML('beforeend',emblem(remote.seats[i].rating,17)); rt.append(String(remote.seats[i].rating)); rt.title=rankOf(remote.seats[i].rating).name; }
   });
   let s;
   const iAmOut=isOnline&&me>=0&&!waiting&&t[me].cells===0;
@@ -622,6 +695,7 @@ function renderMeta(){
     sn.textContent=dd>=maxDead(n)?'Mort subite : la grille ne peut plus rétrécir.':rd<30?`Mort subite : le bord commence à disparaître dans ${left} tour${pl} (tour ${rd+1}).`:`Mort subite : le bord disparaît dans ${left} tour${pl}.`;
   } else sn.hidden=true;
   $('#room').hidden=!waiting; $('#players').hidden=waiting; boardEl.hidden=waiting;
+  if(over) maybeRitual();
   $('#leaveroom').hidden=!(waiting&&me>=0);
   if(waiting) renderRoom();
   $('#rematch').hidden=!over||(isOnline&&me<0);
@@ -837,6 +911,9 @@ function busy(b){ const off=b||!online; $('#create').disabled=off; $('#join').di
 function renderProfile(p){
   if(!p) return;
   $('#elo').textContent=p.elo;
+  { const r=rankOf(p.elo); $('#rankline').hidden=false; $('#rk-emb').innerHTML=emblem(p.elo,52); $('#rk-name').textContent=r.name;
+    const f=$('#rk-fill'); f.style.width=Math.round(r.progress*100)+'%'; f.style.setProperty('--rkc',rankColor(p.elo));
+    $('#rk-next').textContent=(r.nextName?`Encore ${r.toNext} Élo pour ${r.nextName}`:'Rang maximum')+` · rang ${r.index+1} sur 15`; }
   const ng=p.games, nw=p.wins;
   $('#pstats').textContent=ng?`${ng} partie${ng>1?'s':''} classée${ng>1?'s':''} · ${nw} victoire${nw>1?'s':''}`:'Pas encore de partie classée. Tout le monde commence à 1000.';
   const nm=$('#name'); if(document.activeElement!==nm) nm.value=p.name;
@@ -872,6 +949,68 @@ async function loadLobby(){
   }catch(e){ if(e.code!=='unavailable') toast(errMsg(e)); }
   loadTop(); loadRooms();
 }
+/* ---------- rituel de fin de partie classée ---------- */
+const RITUAL_KEY='propagation:rituals';
+function ritualDone(c){ try{ return JSON.parse(localStorage.getItem(RITUAL_KEY)||'[]').includes(c); }catch(e){ return false; } }
+function ritualMark(c){ try{ const a=JSON.parse(localStorage.getItem(RITUAL_KEY)||'[]'); if(!a.includes(c)){ a.push(c); localStorage.setItem(RITUAL_KEY,JSON.stringify(a.slice(-60))); } }catch(e){} }
+const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+let ritualCode=null, ritualRun=0;
+function maybeRitual(){
+  if(mode!=='online'||!remote||remote.status!=='done'||anim||me<0||!$('#ritual').hidden) return;
+  const r=remote.result; if(!r||!r.ranked||!r.before||ritualCode===code||ritualDone(code)) return;
+  ritualCode=code; const c=code;
+  setTimeout(()=>{ if(mode==='online'&&remote&&code===c&&remote.result&&$('#ritual').hidden){ ritualMark(c); showRitual(remote.result); } else if(code!==c) ritualCode=null; },reduceMotion()?200:1200);
+}
+function confetti(big){
+  if(reduceMotion()) return;
+  const cv=$('#rt-fx'), W=cv.width=innerWidth, H=cv.height=innerHeight, ctx=cv.getContext('2d');
+  const cs=getComputedStyle(document.documentElement), cols=[0,1,2,3,4,5].map(i=>cs.getPropertyValue('--p'+i).trim()||'#888');
+  const N=big?170:70, ps=Array.from({length:N},()=>({x:W/2+(Math.random()-.5)*W*.3,y:H*.42,vx:(Math.random()-.5)*(big?15:9),vy:-(Math.random()*(big?17:11)+4),s:5+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[Math.floor(Math.random()*cols.length)]}));
+  const run=ritualRun; let t=0;
+  (function f(){ if(run!==ritualRun||$('#ritual').hidden){ ctx.clearRect(0,0,W,H); return; }
+    ctx.clearRect(0,0,W,H); t++;
+    for(const p of ps){ p.vy+=.4; p.vx*=.992; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.fillStyle=p.c; ctx.globalAlpha=Math.max(0,1-t/150); ctx.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6); ctx.restore(); }
+    if(t<150) requestAnimationFrame(f); else ctx.clearRect(0,0,W,H); })();
+}
+async function showRitual(r){
+  const run=++ritualRun, wait=ms=>new Promise(res=>setTimeout(res,reduceMotion()?0:ms)), live=()=>run===ritualRun&&!$('#ritual').hidden;
+  const b=r.before[me], a=r.after[me], rb=rankOf(b), ra=rankOf(a), T=remote.teams, names=getNames();
+  const win=T?remote.winner%T===me%T:remote.winner===me;
+  $('#rt-title').textContent=win?'Victoire !':T?'Défaite':`${ord(r.ranks[me])} place`;
+  $('#rt-sub').textContent=win?(T?'Ton équipe a gagné la partie.':'Tu as gagné la partie.'):T?`L’équipe ${LETTERS[remote.winner%T]} a gagné la partie.`:`${names[remote.winner]||'Un joueur'} a gagné la partie.`;
+  const badge=$('#rt-badge'), fill=$('#rt-fill'), ban=$('#rt-banner'), dl=$('#rt-delta'), nx=$('#rt-next');
+  badge.className='rt-badge'; badge.innerHTML=emblem(b,128); $('#rt-name').textContent=rb.name; ban.textContent=''; ban.className='rt-banner';
+  dl.className='rt-delta'; dl.textContent=''; $('#rt-elo').textContent=b; nx.textContent='';
+  fill.style.transition='none'; fill.style.width=Math.round(rb.progress*100)+'%'; fill.style.setProperty('--rkc',rankColor(b)); void fill.offsetWidth; fill.style.transition='';
+  $('#ritual').hidden=false; $('#rt-ok').focus({preventScroll:true});
+  await wait(700); if(!live()) return;
+  // compteur d'Élo
+  const dur=reduceMotion()?0:1100, t0=performance.now();
+  const d=a-b; dl.textContent=(d>0?'+':d<0?'−':'±')+Math.abs(d); dl.classList.add(d>0?'up':d<0?'down':'zero');
+  await new Promise(res=>{ const tick=t=>{ if(!live()){ res(); return; } const k=dur?Math.min(1,(t-t0)/dur):1; $('#rt-elo').textContent=Math.round(b+(a-b)*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(tick); else res(); }; requestAnimationFrame(tick); });
+  if(!live()) return; dl.classList.add('on');
+  const swap=(cls)=>{ badge.className='rt-badge '+cls; badge.innerHTML=emblem(a,128); $('#rt-name').textContent=ra.name; fill.style.setProperty('--rkc',rankColor(a)); };
+  const reset=(w)=>{ fill.style.transition='none'; fill.style.width=w; void fill.offsetWidth; fill.style.transition=''; };
+  if(ra.index>rb.index){            // promotion
+    fill.style.width='100%'; await wait(1000); if(!live()) return;
+    reset('0%'); swap('pop'); ban.textContent=`Promotion ! ${ra.name}`; ban.classList.add('promo'); confetti(true);
+    await wait(300); fill.style.width=Math.round(ra.progress*100)+'%';
+  } else if(ra.index<rb.index){     // relégation
+    fill.style.width='0%'; await wait(1000); if(!live()) return;
+    reset('100%'); swap('drop'); ban.textContent=`Relégation : ${ra.name}`; ban.classList.add('relega');
+    await wait(300); fill.style.width=Math.round(ra.progress*100)+'%';
+  } else {
+    fill.style.width=Math.round(ra.progress*100)+'%';
+    if(win) confetti(false);
+  }
+  await wait(900); if(!live()) return;
+  nx.textContent=ra.nextName?`Encore ${ra.toNext} Élo pour ${ra.nextName}`:'Rang maximum atteint';
+}
+function closeRitual(){ ritualRun++; $('#ritual').hidden=true; }
+$('#rt-ok').addEventListener('click',closeRitual);
+$('#ritual').addEventListener('click',e=>{ if(e.target.id==='ritual') closeRitual(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#ritual').hidden) closeRitual(); });
+
 function renderRooms(list){
   const box=$('#rooms'); box.textContent='';
   if(!list.length){ const p=document.createElement('p'); p.className='note'; p.textContent='Aucune salle ouverte pour le moment. Crée la tienne : elle apparaîtra ici pour les autres joueurs.'; box.append(p); return; }
@@ -899,9 +1038,10 @@ async function loadTop(){
     r.top.forEach((p,i)=>{
       const li=document.createElement('li'); if(p.me) li.className='me';
       const a=document.createElement('span'); a.className='r'; a.textContent=i+1;
+      const em=document.createElement('span'); em.innerHTML=emblem(p.elo,22); em.title=rankOf(p.elo).name;
       const b=document.createElement('span'); b.className='n'; b.textContent=p.name;
       const c=document.createElement('span'); c.className='e'; c.textContent=p.elo;
-      li.append(a,b,c); ol.append(li);
+      li.append(a,em,b,c); ol.append(li);
     });
     $('#topnote').textContent=r.top.length?(r.myRank?`Tu es ${ord(r.myRank)} sur ${r.total}.`:'Joue une partie classée pour apparaître dans le classement.'):'Personne n’est encore classé. Termine une partie classée pour ouvrir le bal.';
   }catch(e){}
