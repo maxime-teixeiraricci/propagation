@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const E = require('./engine.js');
+const Bot = require('./bot.js');
 
 const PORT = process.env.PORT || 3000;
 const TEST = process.env.PROPAGATION_TEST === '1';          // autorise des délais très courts (tests)
@@ -33,6 +34,7 @@ const TURN_CHOICES_H = [12, 24, 48, 72];
 const START_ELO = 1000, K_FACTOR = 32, MIN_ELO = 100;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'https://github.com/maxime-teixeiraricci/propagation';
 const MAX_PUSH_PER_PLAYER = 5;
+const BOT_FAST = TEST && process.env.BOT_FAST === '1';        // essais : les IA jouent presque tout de suite
 const MAX_ACTIVE_PER_PLAYER = 12, MAX_GAMES = 4000, MAX_PLAYERS = 20000;
 
 const players = new Map();   // pid -> { pid, h, name, elo, games, wins, created }
@@ -144,28 +146,73 @@ function finish(g) {
   const ranks = E.ranksFrom(g.np, g.winner, g.elim);
   const res = { ranks, ranked: false, before: null, after: null, delta: null };
   if (g.ranked && g.np >= 2 && g.players.every(Boolean) && new Set(g.players).size === g.np) {
-    const ps = g.players.map(pid => players.get(pid));
-    if (ps.every(Boolean)) {
-      const before = ps.map(p => p.elo), delta = E.eloDeltas(before, ranks, K_FACTOR);
-      ps.forEach((p, i) => {
+    const ws = g.players.map(who);
+    if (ws.every(Boolean) && ws.some(x => !x.bot)) {
+      const before = ws.map(x => x.elo), delta = E.eloDeltas(before, ranks, K_FACTOR);
+      const after = before.slice();
+      ws.forEach((x, i) => {                    // les IA gardent leur Élo fixe ; seuls les humains bougent
+        if (x.bot) return;
+        const p = x.p;
         p.elo = Math.max(MIN_ELO, before[i] + delta[i]); p.games++;
         if (g.winner === i) p.wins++;
-        markP(p.pid);
+        after[i] = p.elo; markP(p.pid);
       });
-      res.ranked = true; res.before = before; res.after = ps.map(p => p.elo); res.delta = res.after.map((a, i) => a - before[i]);
+      res.ranked = true; res.before = before; res.after = after; res.delta = after.map((a, i) => a - before[i]);
     }
   }
   g.result = res;
   for (const pid of g.players) if (pid) pushProfile(pid);
 }
+/* ======================= joueurs IA ======================= */
+// Un siège d'IA est repéré par un identifiant « bot:NIVEAU:SIÈGE » (impossible à confondre avec un compte).
+const isBot = pid => typeof pid === 'string' && pid.startsWith('bot:');
+const botLevel = pid => Number(pid.split(':')[1]) || 3;
+function who(pid) {              // nom et Élo d'un siège, humain ou IA
+  if (!pid) return null;
+  if (isBot(pid)) { const l = Bot.byLevel(botLevel(pid)); return { name: 'IA ' + l.name, elo: l.elo, bot: true }; }
+  const p = players.get(pid);
+  return p ? { name: p.name, elo: p.elo, bot: false, p } : null;
+}
+const botTimers = new Map();
+function scheduleBot(g) {
+  if (g.status !== 'playing' || botTimers.has(g.code)) return;
+  const pid = g.players[g.turn];
+  if (!isBot(pid)) return;
+  const seq = g.seq;
+  // l'IA attend la fin de l'animation du coup précédent, pour que la partie reste lisible
+  const wait = BOT_FAST ? 25 : Math.max(g.last ? 700 : 1300, g.botWait || 0);
+  botTimers.set(g.code, setTimeout(() => { botTimers.delete(g.code); runBot(g.code, seq); }, wait));
+}
+function runBot(code, seq) {
+  const g = games.get(code);
+  if (!g || g.status !== 'playing' || g.seq !== seq || !isBot(g.players[g.turn])) return;
+  try {
+    const seat = g.turn;
+    let i = Bot.choose(botLevel(g.players[seat]), { n: g.n, o: g.o, c: g.c }, seat, g.np);
+    if (!(Number.isInteger(i) && i >= 0 && i < g.c.length && g.o[i] === seat && g.c[i] > 0)) {    // garde-fou : coup toujours légal
+      const own = []; for (let k = 0; k < g.c.length; k++) if (g.o[k] === seat && g.c[k] > 0) own.push(k);
+      if (!own.length) return;
+      i = own[rnd(own.length)];
+    }
+    applyMove(g, seat, i); pushGame(g);
+  } catch (e) { console.error('IA :', e); }
+}
+
 // Après un changement de plateau : éliminations, victoire éventuelle, joueur suivant.
 function settle(g, opt) {
   updateElim(g);
   const alive = aliveSeats(g);
   g.seq++; g.updated = Date.now();
+  const botsOnly = g.players.some(isBot) && alive.length > 1 && !alive.some(s => !isBot(g.players[s]));
   if (alive.length <= 1) {
     g.winner = alive.length === 1 ? alive[0] : -1;
     if (g.winner >= 0) g.turn = g.winner;
+    finish(g);
+  } else if (botsOnly) {                       // plus aucun humain en jeu : la partie s'arrête, les IA restantes sont départagées au score
+    const val = s => { let v = 0; for (let k = 0; k < g.c.length; k++) if (g.o[k] === s && g.c[k] > 0) v += 3 + g.c[k]; return v; };
+    const win = alive.reduce((a, b) => (val(b) > val(a) ? b : a));
+    g.elim.push(alive.filter(s => s !== win));
+    g.winner = win; g.turn = win;
     finish(g);
   } else if (opt.advance) {
     g.turn = E.nextTurn(g.o, g.c, opt.from, g.np);
@@ -175,6 +222,12 @@ function settle(g, opt) {
     startTurnClock(g);
   }
   markG(g);
+}
+function applyMove(g, seat, i) {
+  const r = E.simulate({ n: g.n, o: g.o, c: g.c }, i, seat);
+  g.o = r.o; g.c = r.c; g.last = { i, p: seat };
+  g.botWait = Math.min(6000, 450 + 380 * (r.frames.length - 1));      // durée de l'animation chez le joueur
+  settle(g, { from: seat, advance: true });
 }
 function eliminate(g, seat) {              // abandon, absence ou délai dépassé
   for (let i = 0; i < g.c.length; i++) if (g.o[i] === seat) { g.o[i] = -1; g.c[i] = 0; }
@@ -201,18 +254,18 @@ const activeCount = pid => { let k = 0; for (const g of games.values()) if (g.st
 
 function viewFor(g, pid) {
   return {
-    code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, status: g.status,
+    code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status,
     o: g.o, c: g.c, turn: g.turn, seq: g.seq, last: g.last, winner: g.winner,
-    seats: g.players.map(p => { const pr = p && players.get(p); return { filled: !!p, name: pr ? pr.name : '', rating: pr ? pr.elo : null }; }),
+    seats: g.players.map(p => { const w = who(p); return { filled: !!p, name: w ? w.name : '', rating: w ? w.elo : null, bot: !!(w && w.bot) }; }),
     me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result
   };
 }
 function summary(g, pid) {
   const me = g.players.indexOf(pid);
   return {
-    code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, status: g.status, me,
+    code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status, me,
     turn: g.turn, winner: g.winner, deadline: g.deadline, updated: g.updated,
-    names: g.players.map(p => { const pr = p && players.get(p); return pr ? pr.name : ''; }),
+    names: g.players.map(p => { const w = who(p); return w ? w.name : ''; }),
     filled: g.players.filter(Boolean).length,
     result: g.result && me >= 0 ? { rank: g.result.ranks[me], delta: g.result.delta ? g.result.delta[me] : null, ranked: g.result.ranked } : null
   };
@@ -273,7 +326,7 @@ function notifyTurn(g) {
   if (g.status !== 'playing' || g.notifiedAt === g.turnAt) return;
   g.notifiedAt = g.turnAt;
   const pid = g.players[g.turn];
-  if (pid && !playerHere(pid, g.code)) notifyPid(pid, g.mode === 'long' ? 86400 : 600).catch(() => {});
+  if (pid && !isBot(pid) && !playerHere(pid, g.code)) notifyPid(pid, g.mode === 'long' ? 86400 : 600).catch(() => {});
 }
 function remindTurns(now) {        // partie longue : rappel quand il reste peu de temps (3 h, ou 1/4 du délai si plus court)
   for (const g of games.values()) {
@@ -302,6 +355,7 @@ function send(c, obj) { sendRaw(c, 1, Buffer.from(JSON.stringify(obj))); }
 function pushGame(g) {
   for (const c of clients) if (c.pid && c.subs.has(g.code)) send(c, { t: 'game', code: g.code, g: viewFor(g, c.pid), now: Date.now() });
   notifyTurn(g);
+  scheduleBot(g);
 }
 function pushProfile(pid) {
   const p = players.get(pid); if (!p) return;
@@ -321,7 +375,7 @@ const OPS = {
       players.set(pid, p); markP(pid);
     }
     c.pid = pid;
-    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, vapid: vapid ? vapid.pub : null } };
+    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, vapid: vapid ? vapid.pub : null, bots: Bot.LEVELS } };
   },
   name(c, m) {
     const nm = clean(m.name); if (!nm) throw new Err('invalid');
@@ -333,7 +387,8 @@ const OPS = {
     const np = Number(m.np);
     if (![2, 4, 6, 8].includes(np)) throw new Err('invalid');
     const sizes = E.SIZES[np], n = sizes.slice(0, 3).includes(Number(m.n)) ? Number(m.n) : sizes[3];
-    const mode = m.mode === 'long' ? 'long' : 'live';
+    const ai = m.ai && typeof m.ai === 'object' ? Math.min(Bot.LEVELS.length, Math.max(1, Math.floor(Number(m.ai.level)) || 3)) : 0;
+    const mode = !ai && m.mode === 'long' ? 'long' : 'live';        // contre l'IA : toujours en direct, sans délai
     let turnMs = 0;
     if (mode === 'long') {
       const h = Number(m.hours);
@@ -349,7 +404,9 @@ const OPS = {
     const g = { code, n, np, mode, turnMs, ranked: m.ranked !== false, status: 'waiting', players: new Array(np).fill(null),
       o: b.o, c: b.c, turn: rnd(np), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now };
     g.players[0] = c.pid;
+    if (ai) { g.ai = ai; for (let k = 1; k < np; k++) g.players[k] = `bot:${ai}:${k}`; startPlaying(g); }
     games.set(code, g); markG(g);
+    if (ai) scheduleBot(g);
     return { code };
   },
   join(c, m) {
@@ -377,9 +434,7 @@ const OPS = {
     const seat = g.players.indexOf(c.pid), i = m.i;
     if (seat < 0 || seat !== g.turn) throw new Err('not_your_turn');
     if (!Number.isInteger(i) || i < 0 || i >= g.n * g.n || g.o[i] !== seat || g.c[i] <= 0) throw new Err('invalid_move');
-    const r = E.simulate({ n: g.n, o: g.o, c: g.c }, i, seat);
-    g.o = r.o; g.c = r.c; g.last = { i, p: seat };
-    settle(g, { from: seat, advance: true });
+    applyMove(g, seat, i);
     pushGame(g);
     return {};
   },
@@ -416,7 +471,7 @@ const OPS = {
     const g = games.get(String(m.code || '').toUpperCase());
     if (!g) throw new Err('not_found');
     const seat = g.players.indexOf(c.pid);
-    if (g.status !== 'playing' || g.mode !== 'live' || seat < 0 || seat === g.turn) throw new Err('forbidden');
+    if (g.status !== 'playing' || g.mode !== 'live' || seat < 0 || seat === g.turn || isBot(g.players[g.turn])) throw new Err('forbidden');
     if (Date.now() - g.turnAt < KICK_LIVE_MS) throw new Err('too_soon');
     eliminate(g, g.turn); pushGame(g);
     return {};
@@ -479,6 +534,7 @@ function tick() {
   const now = Date.now();
   remindTurns(now);
   for (const g of [...games.values()]) {
+    if (g.status === 'playing') scheduleBot(g);                // reprise après un redémarrage
     if (g.status === 'playing' && g.mode === 'long' && g.deadline && now > g.deadline) {
       log(`délai dépassé : partie ${g.code}, place ${g.turn} éliminée`);
       eliminate(g, g.turn); pushGame(g);

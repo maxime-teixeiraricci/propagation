@@ -223,12 +223,18 @@ details ol{padding-left:20px; display:flex; flex-direction:column; gap:6px; max-
     <div class="card stack">
       <h2>Nouvelle partie</h2>
       <div class="row">
+        <label for="opp">Adversaires
+          <select id="opp"><option value="friends" selected>Mes amis, en ligne</option><option value="ai">L’ordinateur (IA)</option></select>
+        </label>
+        <label for="level" id="levelbox" hidden>Niveau de l’IA<select id="level"></select></label>
+      </div>
+      <div class="row">
         <label for="np">Joueurs
           <select id="np"><option value="2" selected>2 joueurs</option><option value="4">4 joueurs</option><option value="6">6 joueurs</option><option value="8">8 joueurs</option></select>
         </label>
         <label for="size">Grille<select id="size"></select></label>
       </div>
-      <div class="row">
+      <div class="row" id="moderow">
         <label for="mode">Rythme
           <select id="mode"><option value="live" selected>Rapide : tout le monde est là</option><option value="long">Longue durée : plusieurs jours</option></select>
         </label>
@@ -474,7 +480,7 @@ function renderMeta(){
   const isOnline=mode==='online';
   const waiting=isOnline&&remote.status==='waiting';
   const joined=isOnline?remote.seats.filter(s=>s.filled).length:np;
-  const showRating=isOnline&&remote.ranked;
+  const showRating=isOnline&&(remote.ranked||remote.ai>0);
   let h='';
   for(let i=0;i<np;i++){
     const seat=!isOnline||remote.seats[i].filled;
@@ -512,7 +518,7 @@ function renderMeta(){
 }
 function updateKick(){
   const b=$('#kick');
-  const show=mode==='online'&&!!remote&&remote.mode==='live'&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&now()-turnSince>KICK_MS;
+  const show=mode==='online'&&!!remote&&!remote.ai&&remote.mode==='live'&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&now()-turnSince>KICK_MS;
   b.hidden=!show;
   if(show) b.textContent=`${getNames()[view.turn]} ne répond plus ? L’éliminer`;
 }
@@ -588,6 +594,7 @@ async function createGame(){
   $('#create-err').textContent=''; busy(true);
   try{
     const o={np:+$('#np').value||2,n:+$('#size').value,mode:$('#mode').value,hours:+$('#hours').value,ranked:$('#ranked').checked};
+    if($('#opp').value==='ai') o.ai={level:+$('#level').value||3};
     if(window.__TURN_MS) o.turnMs=window.__TURN_MS;   // essais uniquement
     const r=await Net.call('create',o);
     enterGame(r.code);
@@ -653,7 +660,7 @@ function renderGames(list,skewNow){
     const mineTurn=s.status==='playing'&&s.turn===s.me;
     const b=document.createElement('button'); b.className='gitem'+(mineTurn?' mine':''); b.style.setProperty('--pc',`var(--p${Math.max(0,s.me)})`);
     b.innerHTML=`<span class="sw" data-sh="${Math.max(0,s.me)}"></span><span class="gi"><span class="g1"></span><span class="g2"></span></span>`;
-    b.querySelector('.g1').textContent=`Partie ${s.code} · ${s.mode==='long'?'Longue durée':'Rapide'} · ${s.np} joueurs · ${s.n}×${s.n}`;
+    b.querySelector('.g1').textContent=`Partie ${s.code} · ${s.ai?'Contre l’IA':s.mode==='long'?'Longue durée':'Rapide'} · ${s.np} joueurs · ${s.n}×${s.n}`;
     const left=s.deadline?fmtLeft(s.deadline-(Date.now()+skewNow)):'';
     let t;
     if(s.status==='waiting') t=`En attente de joueurs (${s.filled}/${s.np})`;
@@ -786,15 +793,29 @@ function fillSizes(){
   const [a,b,c,def]=SIZES[$('#np').value]||SIZES[2];
   $('#size').innerHTML=[a,b,c].map(v=>`<option value="${v}"${v===def?' selected':''}>${v} × ${v}</option>`).join('');
 }
+function fillLevels(){
+  const bots=(Net.features&&Net.features.bots)||[], sel=$('#level');
+  const has=bots.length>0; $('#opp').querySelector('option[value="ai"]').disabled=!has;
+  if(!has||sel.options.length) return;
+  const mine=(Net.profile&&Net.profile.elo)||1000;
+  let best=bots[0]; bots.forEach(b=>{ if(Math.abs(b.elo-mine)<Math.abs(best.elo-mine)) best=b; });   // niveau proche de ton Élo par défaut
+  sel.innerHTML=bots.map(b=>`<option value="${b.level}"${b===best?' selected':''}>${b.name} · Élo ${b.elo}</option>`).join('');
+}
 function updateModeNote(){
-  const long=$('#mode').value==='long';
-  $('#hoursbox').hidden=!long;
-  let t=long?'Chaque joueur a le temps choisi pour jouer son coup, puis tu peux fermer la page. Un joueur qui dépasse le délai est éliminé. Retrouve tes parties plus haut, dans « Mes parties ».':'Tout le monde joue en direct. Si quelqu’un ne répond plus, les autres peuvent l’éliminer au bout de 45 secondes.';
-  if(long&&online&&Net.features&&Net.features.durable===false) t+=' Attention : ce serveur ne garde pas les parties s’il redémarre ou s’endort, une partie longue risque d’être perdue (voir le README, section « Garder les parties »).';
+  const ai=$('#opp').value==='ai', long=$('#mode').value==='long';
+  $('#levelbox').hidden=!ai; $('#moderow').hidden=ai; $('#hoursbox').hidden=!long;
+  $('#create').textContent=ai?'Jouer contre l’IA':'Créer une partie en ligne';
+  let t;
+  if(ai) t='Tu joues tout de suite, sans attendre personne, et tu peux fermer la page : la partie reste dans « Mes parties ». Chaque niveau d’IA a un Élo fixe : battre un niveau plus fort que toi rapporte plus, et un niveau bien plus faible presque rien. ';
+  else{
+    t=long?'Chaque joueur a le temps choisi pour jouer son coup, puis tu peux fermer la page. Un joueur qui dépasse le délai est éliminé. Retrouve tes parties plus haut, dans « Mes parties ».':'Tout le monde joue en direct. Si quelqu’un ne répond plus, les autres peuvent l’éliminer au bout de 45 secondes.';
+    if(long&&online&&Net.features&&Net.features.durable===false) t+=' Attention : ce serveur ne garde pas les parties s’il redémarre ou s’endort, une partie longue risque d’être perdue (voir le README, section « Garder les parties »).';
+  }
   $('#modenote').textContent=t;
 }
 $('#np').addEventListener('change',fillSizes);
 $('#mode').addEventListener('change',updateModeNote);
+$('#opp').addEventListener('change',updateModeNote);
 $('#create').addEventListener('click',createGame);
 $('#local').addEventListener('click',startLocal);
 $('#join').addEventListener('click',()=>{
@@ -820,7 +841,7 @@ $('#copy').addEventListener('click',async()=>{
 fillSizes(); updateModeNote();
 $('#name').value=ls.get('propagation:name')||'';
 Net.on('state',st=>{
-  if(st==='ready'){ online=true; Notif.sync(); sendVis(); $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.'; busy(false); updateModeNote(); renderProfile(Net.profile); }
+  if(st==='ready'){ online=true; fillLevels(); Notif.sync(); sendVis(); $('#net').textContent='Crée une partie en ligne et envoie le lien à tes amis.'; busy(false); updateModeNote(); renderProfile(Net.profile); }
   else if(st==='down'){ online=false; Notif.render(); busy(false); $('#net').textContent='Connexion perdue, reconnexion…'; }
   else if(st==='authfail'){ online=false; busy(false); $('#net').textContent='Compte non reconnu par le serveur. Utilise ton code de récupération.'; }
 });

@@ -2,7 +2,7 @@
 
 Jeu de grille de 2 à 8 joueurs. Chacun place des points sur ses cases ; à 4 points, une case déborde sur ses 4 voisines. Le dernier joueur qui a encore des cases gagne. Parties à distance avec un lien ou un code, en direct ou sur plusieurs jours, avec un classement Élo.
 
-Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `index.html` (le jeu), `sw.js` + `manifest.webmanifest` + icônes (notifications et installation sur l'écran d'accueil), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
+Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `bot.js` (les joueurs IA), `index.html` (le jeu), `sw.js` + `manifest.webmanifest` + icônes (notifications et installation sur l'écran d'accueil), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
 
 ## Modes
 
@@ -18,6 +18,14 @@ Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles
 - « Mes parties » liste toutes tes parties avec ton côté : on y reprend là où on s'était arrêté, même après avoir fermé la page. Ton titre d'onglet indique quand c'est ton tour.
 - **Code de récupération** : dans « Mon compte », un code de 30 caractères redonne ton compte (nom, Élo, parties) sur un autre appareil. Il donne accès au compte : ne le partage pas.
 - **Élo** : tout le monde commence à 1000, K = 32. Chaque paire de joueurs compte comme un duel selon le rang final (à N joueurs, chaque duel pèse K/(N-1)). Seules les parties « classées » dont toutes les places sont prises par des comptes différents comptent. Classement des 20 premiers dans le salon.
+
+## Jouer contre l'ordinateur
+
+- Dans « Nouvelle partie », choisis « L'ordinateur (IA) », un niveau, le nombre de joueurs (2 : toi contre une IA ; 4, 6 ou 8 : toi contre 3, 5 ou 7 IA du même niveau) et la grille. La partie démarre tout de suite, sans délai, et reste dans « Mes parties ».
+- 11 niveaux, du Novice (coups au hasard) au Grand maître (qui regarde aussi ta réponse avant de jouer). Les niveaux se distinguent par la réflexion et une part de coups au hasard, de plus en plus faible.
+- Chaque niveau a un **Élo fixe**, affiché dans la liste : il ne bouge jamais. Une partie classée contre l'IA modifie ton Élo comme contre un joueur de ce niveau : battre un niveau plus fort que toi rapporte plus, battre un niveau bien plus faible presque rien. Décoche « Partie classée » pour jouer sans enjeu.
+- Ces Élo ont été mesurés par des parties entre les IA (1 contre 1, grille 8 × 8, 250 parties entre niveaux voisins, places et premier joueur tirés au sort). L'échelle est calée en donnant 1000 au niveau « Amateur » : ce sont des repères entre IA, pas une mesure sur de vrais joueurs. À 4 joueurs ou plus, ces Élo restent une estimation.
+- Si tu abandonnes à 4 joueurs ou plus, la partie s'arrête (les IA ne se battent pas entre elles) et tu finis dernier.
 
 ## Notifications « c'est ton tour »
 
