@@ -656,7 +656,7 @@ function applyRemote(){
     const nv={o:d.o,c:d.c,turn:d.turn,winner:d.status==='done'?d.winner:-1,seq:d.seq};
     if(d.last&&view.o&&d.seq===view.seq+1){
       const r=simulate({n:d.n,o:view.o,c:view.c},d.last.i,d.last.p,teamArr());
-      playFrames(r.frames,()=>{ setView(nv); if(remote.seq>view.seq) applyRemote(); });
+      playFrames(r.frames,()=>{ if(mode!=='online'||!remote) return; setView(nv); if(remote.seq>view.seq) applyRemote(); });
     } else setView(nv);
   } else renderMeta();
 }
