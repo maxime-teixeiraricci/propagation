@@ -673,49 +673,6 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
 .tt.pop{animation:ttIn .3s cubic-bezier(.3,1.5,.5,1)}
 @keyframes ttIn{from{transform:translate(-50%,-24px) scale(.92); opacity:0}}
 @media (prefers-reduced-motion: reduce){ .tt.pop{animation:none} }
-/* ---------- Royale ---------- */
-.ry-card .cqc-lead{margin:0 0 6px; font:800 18px/1.25 var(--display); color:var(--ink)}
-#royale{display:flex; flex-direction:column; gap:14px}
-.ry-head{display:flex; align-items:center; gap:12px}
-.ry-title{flex:1 1 auto; min-width:0} .ry-title h2{margin:0} .ry-title .note{margin:0}
-.ry-clock{flex:none; min-width:64px; text-align:center; padding:6px 12px 7px; border:3px solid var(--ink); border-radius:14px; background:#fff; box-shadow:0 3px 0 var(--ink); font:900 28px/1 var(--display); color:var(--ink)}
-.ry-clock small{font:800 13px var(--display); margin-left:2px}
-.ry-clock.low{background:#FFE3E8; color:var(--danger); border-color:var(--danger); box-shadow:0 3px 0 var(--danger)}
-.ry-clock.wait{font-size:15px; padding:11px 12px; color:var(--muted)}
-.ry-bar{height:10px; border-radius:99px; background:#fff; border:2px solid var(--ink); overflow:hidden}
-.ry-bar i{display:block; height:100%; width:100%; background:var(--accent); transform-origin:left; transition:width .25s linear}
-.ry-bar.low i{background:var(--danger)}
-.ry-count{margin:0; font:800 22px/1.2 var(--display); color:var(--ink)}
-.ry-seats{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px}
-.ry-seat{display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:10px; background:#fff; border:2px solid #fff; box-shadow:0 2px 0 #A9C3EE; font:700 14px var(--body); min-width:0}
-.ry-seat span.nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.ry-seat.empty{background:transparent; box-shadow:none; border:2px dashed #A9C3EE; color:var(--muted); font-weight:600}
-.ry-seat.me{border-color:var(--p0)}
-.ry-seat .sw{width:16px; height:16px; background:var(--pc); flex:none; border-radius:50%}
-.ry-main{display:flex; flex-direction:column; gap:14px}
-.ry-stage{display:flex; flex-direction:column; gap:10px; min-width:0}
-.ry-boardcard{padding:10px; display:flex; flex-direction:column; gap:8px}
-.ry-scroll{overflow:auto; max-height:min(78vh,760px); border-radius:10px; background:var(--surface2); touch-action:pan-x pan-y pinch-zoom; overscroll-behavior:contain; text-align:center}
-.ry-scroll canvas{display:block; margin:0 auto; touch-action:manipulation; cursor:pointer}
-.ry-tools{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.ry-tools .note{margin:0; flex:1 1 140px; min-height:1.3em}
-.ry-side h2{margin-bottom:8px}
-.ry-list{list-style:none; margin:0 0 10px; padding:0; display:flex; flex-direction:column; gap:3px; max-height:420px; overflow:auto}
-.ry-list li{display:flex; align-items:center; gap:8px; padding:4px 8px; border-radius:8px; font:700 14px var(--body); background:#fff; min-width:0}
-.ry-list li.me{box-shadow:inset 0 0 0 2px var(--ink)}
-.ry-list li.out{opacity:.5}
-.ry-list .sw{width:16px; height:16px; background:var(--pc); flex:none; border-radius:50%}
-.ry-list .nm{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.ry-list .st{flex:none; font:700 12px var(--body); color:var(--muted); font-variant-numeric:tabular-nums}
-.ry-list .ok{flex:none; width:16px; text-align:center; color:#1FAE6B; font-weight:900}
-.ry-list .rk{flex:none; width:22px; text-align:right; font:800 13px var(--display); color:var(--muted)}
-@media (min-width:960px){
-  #royale:not([hidden]){--bw:min(calc(100vw - 460px), 760px)}
-  .ry-main{display:grid; grid-template-columns:minmax(0,var(--bw)) 340px; justify-content:center; gap:24px; align-items:start}
-  .ry-head,.ry-bar,#ry-room{max-width:calc(var(--bw) + 364px); width:100%; margin-inline:auto}
-  .ry-scroll{max-height:calc(100vh - 250px)}
-  .ry-list{max-height:calc(100vh - 300px)}
-}
 </style>
 </head>
 <body>
@@ -765,19 +722,6 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
         </div>
         <p class="note err" id="rerr"></p>
       </details>
-    </div>
-
-    <div class="card major ry-card" id="rycard" hidden>
-      <h2>Royale</h2>
-      <p class="cqc-lead">16 à 24 joueurs sur une île différente à chaque partie.</p>
-      <p class="note">Tout le monde joue en même temps : toutes les 10 secondes, chacun pose un point, puis les débordements se propagent ensemble. La zone rétrécit, un seul survivant. Les places vides sont prises par des IA.</p>
-      <div class="row">
-        <label for="ry-np">Joueurs<select id="ry-np"><option value="16">16 joueurs</option><option value="20">20 joueurs</option><option value="24">24 joueurs</option></select></label>
-        <button class="btn" id="ry-go" type="button">Ouvrir une salle</button>
-      </div>
-      <label class="check" for="ry-ranked"><input type="checkbox" id="ry-ranked" checked> Classée : Élo entre joueurs réels (au moins 2)</label>
-      <label class="check" for="ry-public"><input type="checkbox" id="ry-public" checked> Salle publique : visible dans la liste des salles ouvertes</label>
-      <p class="note err" id="ry-err"></p>
     </div>
 
     <div class="card major cq-card" id="ccard" hidden>
@@ -874,56 +818,11 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
       </ol>
       <h3 class="sub">À savoir</h3>
       <ul class="tips">
-        <li><b>Royale :</b> 16 à 24 joueurs sur une île au contour irrégulier. Toutes les 10 secondes, chacun pose un point en même temps, puis les débordements se propagent ensemble. La zone rétrécit vers la cible dorée : le dernier en vie gagne.</li>
         <li><b>Partie classée :</b> chacun commence à 1000 Élo. Battre un joueur mieux classé rapporte plus. Les 15 rangs vont de D (700 Élo) à X (3500 Élo), par paliers de 200 points. Le rang X n'a pas de plafond : X0, X1, X2… tous les 200 points.</li>
         <li><b>Longue durée :</b> chaque joueur a de 12 h à 72 h pour jouer son coup, sinon il est éliminé. Tu peux fermer la page entre deux coups.</li>
         <li><b>Mort subite</b> (à 6 et 8 joueurs, en option) : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours.</li>
       </ul>
     </details>
-  </section>
-
-  <section id="royale" hidden>
-    <div class="ry-head">
-      <button class="btn ghost small" id="ry-leave" type="button">← Mes parties</button>
-      <div class="ry-title"><h2>Royale</h2><p class="note" id="ry-sub"></p></div>
-      <div class="ry-clock" id="ry-clock" hidden aria-live="off"><b id="ry-t">10</b><small>s</small></div>
-    </div>
-    <div class="ry-bar" id="ry-bar" hidden><i id="ry-bari"></i></div>
-
-    <div class="card stack" id="ry-room" hidden>
-      <div class="share">
-        <span class="code" id="ry-code" aria-label="Code de la salle"></span>
-        <button class="btn ghost" id="ry-copy" type="button">Copier le lien</button>
-      </div>
-      <p class="ry-count" id="ry-count" aria-live="polite"></p>
-      <p class="note" id="ry-roomnote"></p>
-      <div class="ry-seats" id="ry-seats"></div>
-      <div class="row">
-        <button class="btn" id="ry-start" type="button" hidden>Lancer maintenant</button>
-        <button class="btn ghost" id="ry-quit" type="button">Quitter la salle</button>
-      </div>
-    </div>
-
-    <div class="ry-main" id="ry-play" hidden>
-      <div class="ry-stage">
-        <p class="status" id="ry-status" aria-live="polite"></p>
-        <p class="timer" id="ry-zone"></p>
-        <div class="card ry-boardcard">
-          <div class="ry-scroll" id="ry-scroll"><canvas id="ry-canvas" aria-label="Carte de la partie"></canvas></div>
-          <div class="ry-tools">
-            <button class="btn ghost small" id="ry-zout" type="button" aria-label="Dézoomer">−</button>
-            <button class="btn ghost small" id="ry-zin" type="button" aria-label="Zoomer">+</button>
-            <button class="btn ghost small" id="ry-me" type="button">Mes cases</button>
-            <span class="note" id="ry-info" aria-live="polite"></span>
-          </div>
-        </div>
-      </div>
-      <div class="card ry-side">
-        <h2 id="ry-listt">Joueurs</h2>
-        <ol class="ry-list" id="ry-list"></ol>
-        <div class="row"><button class="btn ghost" id="ry-resign" type="button" hidden>Abandonner</button></div>
-      </div>
-    </div>
   </section>
 
   <section id="game" class="stack" hidden>
@@ -1046,7 +945,6 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
 </main>
 
 <script src="engine.js"></script>
-<script src="royale.js"></script>
 <script>
 (()=>{
 const {newBoard,simulate,step,nextTurn,tally,SIZES,ring,maxDead,SUDDEN_EVERY,suddenLeft,rankOf}=window.Engine;
@@ -1139,7 +1037,7 @@ let toastT;
 function toast(msg){ $('#toast').textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').textContent=''; },6000); }
 const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.',not_full:'En équipes, toutes les places doivent être prises : complète avec des IA.',too_many_players:'Retire d’abord des joueurs pour réduire le nombre de places.',no_team:'Choisis d’abord ton camp.',busy:'Tu as déjà un combat en cours : termine-le avant d’en lancer un autre.',own:'Cette zone est déjà à ton camp.',far:'Trop loin : une zone doit toucher une zone de ton camp pour être attaquée.',locked:'Tu as déjà choisi ton camp pour cette saison.',no_attack:'Tu n’as plus d’attaque en réserve : une nouvelle arrive toutes les 3 heures.'};
 const errMsg=e=>ERRS[e&&e.code]||'Connexion impossible, réessaie dans un instant.';
-const show=screen=>{ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; $('#conquest').hidden=screen!=='conquest'; $('#royale').hidden=screen!=='royale'; updateTitle(); };
+const show=screen=>{ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; $('#conquest').hidden=screen!=='conquest'; updateTitle(); };
 const setHash=v=>{ try{ if(v) location.hash=v; else if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
 const now=()=>Date.now()+skew;
 function fmtLeft(ms){
@@ -1487,7 +1385,6 @@ Net.on('game',m=>{
   if(!m.g){ toast('Cette partie n’existe plus.'); leave(); return; }
   skew=m.now-Date.now();
   remote=m.g; me=m.g.me; np=m.g.np;
-  if(m.g.roy){ ryApply(); return; }
   if(anim) renderMeta(); else applyRemote();
 });
 function enterGame(c){
@@ -1666,12 +1563,11 @@ function renderGames(list,skewNow){
     const b=document.createElement('button'); b.className='gitem'+(mineTurn?' mine':''); b.style.setProperty('--pc',`var(--p${Math.max(0,s.me)})`);
     b.innerHTML=`<span class="sw" data-sh="${Math.max(0,s.me)}"></span><span class="gi"><span class="g1"></span><span class="g2"></span><span class="g3"></span></span>`;
     const kind=s.status==='waiting'?'Salle':(s.ai&&s.humans<=1)?'Contre l’IA':s.teams?'Par équipes':s.mode==='long'?'Longue durée':'Rapide';
-    b.querySelector('.g1').textContent=s.roy?`Royale ${s.code}`:s.cq?`Conquête · ${s.cq.name}`:`Partie ${s.code} · ${kind}${s.ai&&s.humans>1?' + IA':''}`;
+    b.querySelector('.g1').textContent=s.cq?`Conquête · ${s.cq.name}`:`Partie ${s.code} · ${kind}${s.ai&&s.humans>1?' + IA':''}`;
     b.querySelector('.g3').textContent=s.cq?`Camp ${TEAM_LABEL[s.cq.team]} · grille ${s.n}×${s.h||s.n}`:`${s.np} joueurs · ${s.n}×${s.h||s.n}`;
     const left=s.deadline?fmtLeft(s.deadline-(Date.now()+skewNow)):'';
     let t;
     if(s.status==='waiting') t=`Salle d’attente · ${s.filled}/${s.np} places prises`;
-    else if(s.status==='playing'&&s.roy) t='Royale en cours · à toi de jouer à chaque manche';
     else if(s.status==='playing') t=mineTurn?`À toi de jouer${left?' · '+left:''}`:`Au tour de ${s.names[s.turn]||NAMES[s.turn]}${left?' · '+left:''}`;
     else if(s.result) t=`Terminée · ${s.winner===s.me?'victoire':ord(s.result.rank)}${s.result.ranked&&s.result.delta!=null?` · Élo ${s.result.delta>=0?'+':'−'}${Math.abs(s.result.delta)}`:''}`;
     else t='Terminée';
@@ -1751,19 +1647,12 @@ $('#rt-ok').addEventListener('click',closeRitual);
 $('#ritual').addEventListener('click',e=>{ if(e.target.id==='ritual') closeRitual(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#ritual').hidden) closeRitual(); });
 
-let lobbySkew=0;
 function renderRooms(list){
   const box=$('#rooms'); box.textContent='';
   if(!list.length){ const p=document.createElement('p'); p.className='note'; p.textContent='Aucune salle ouverte pour le moment. Crée la tienne : elle apparaîtra ici pour les autres joueurs.'; box.append(p); return; }
   for(const r of list){
     const b=document.createElement('button'); b.className='gitem'; b.style.setProperty('--pc','var(--p0)');
     b.innerHTML='<span class="sw" data-sh="0"></span><span class="gi"><span class="g1"></span><span class="g2"></span></span>';
-    if(r.roy){
-      b.querySelector('.sw').dataset.sh='6'; b.querySelector('.g1').textContent=`Royale · ${r.host} (Élo ${r.hostElo}) · ${r.filled} joueur${r.filled>1?'s':''}`;
-      const sl=Math.max(0,Math.ceil((r.startAt-(Date.now()+lobbySkew))/1000));
-      b.querySelector('.g2').textContent=`Salle ${r.code} · ${r.np} places, IA en renfort · ${r.ranked?'classée':'amicale'} · départ dans ${Math.floor(sl/60)}:${String(sl%60).padStart(2,'0')}`;
-      b.addEventListener('click',()=>joinGame(r.code,false)); box.append(b); continue;
-    }
     b.querySelector('.g1').textContent=`${r.host} (Élo ${r.hostElo}) · ${r.filled}/${r.np} joueurs`;
     const bits=[`${r.n}×${r.n}`, r.mode==='long'?`longue durée, ${fmtTurn(r.hours*3600000)} par coup`:'rapide', r.ranked?'classée':'amicale'];
     if(r.teams) bits.push(`${r.teams} équipes`);
@@ -1775,7 +1664,7 @@ function renderRooms(list){
 }
 async function loadRooms(){
   if(!online||mode!=='lobby'||document.hidden) return;
-  try{ const r=await Net.call('rooms'); lobbySkew=(r.now||Date.now())-Date.now(); renderRooms(r.rooms); }catch(e){}
+  try{ renderRooms((await Net.call('rooms')).rooms); }catch(e){}
 }
 setInterval(loadRooms,8000);
 let topAll=false, topLast=null;
@@ -2227,261 +2116,6 @@ $('#tt').addEventListener('click',()=>{
   if(code) Net.unsub(code);
   enterGame(c);
 });
-/* ---------- Royale : 16 à 24 joueurs, manches simultanées ---------- */
-const RY_HUES=[0,212,128,300,42,180,334,78,262,22,152,240];
-function hsl2rgb(h,s,l){ s/=100; l/=100; const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l), f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1))); return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)]; }
-const RY_RGB=Array.from({length:24},(_,k)=>hsl2rgb(RY_HUES[k%12],k<12?74:64,k<12?52:34));
-const ryCss=k=>`rgb(${RY_RGB[k%24].join(',')})`;
-const ryMix=(c,t,to)=>`rgb(${c.map((v,i)=>Math.round(v+(to[i]-v)*t)).join(',')})`;
-const RY_PAPER=[244,248,255];
-const ry={ n:0, h:0, cs:0, zoom:1, view:null, anim:false, got:null, sel:null, info:'', seq:-1, hot:false, round:0 };
-const ryCv=$('#ry-canvas'), ryCtx=ryCv.getContext('2d');
-if(window.__TEST) window.__RY=()=>({ry,remote,me});   // essais uniquement
-const ryDpr=()=>Math.min(2,window.devicePixelRatio||1);
-const ryOn=()=>mode==='online'&&!!remote&&!!remote.roy&&!$('#royale').hidden;
-
-function ryLayout(){
-  if(!ry.n) return;
-  const wrap=$('#ry-scroll'), w=Math.max(280,wrap.clientWidth||320);
-  const base=Math.max(13,Math.min(38,Math.floor(w/ry.n)));
-  ry.cs=Math.round(base*ry.zoom);
-  const W=ry.n*ry.cs, H=ry.h*ry.cs, d=ryDpr();
-  ryCv.style.width=W+'px'; ryCv.style.height=H+'px'; ryCv.width=Math.round(W*d); ryCv.height=Math.round(H*d);
-}
-function ryShape(c,k,x,y,r){
-  c.beginPath();
-  const poly=pts=>{ pts.forEach(([px,py],i)=>{ if(i) c.lineTo(x+px*r,y+py*r); else c.moveTo(x+px*r,y+py*r); }); c.closePath(); };
-  switch(k%8){
-    case 0: c.arc(x,y,r,0,7); break;
-    case 1: { const q=r*.86; c.roundRect?c.roundRect(x-q,y-q,2*q,2*q,q*.35):c.rect(x-q,y-q,2*q,2*q); break; }
-    case 2: poly([[0,-1.15],[1.15,0],[0,1.15],[-1.15,0]]); break;
-    case 3: poly([[0,-1.05],[1.05,.8],[-1.05,.8]]); break;
-    case 4: poly([[-.5,-.95],[.5,-.95],[1.05,0],[.5,.95],[-.5,.95],[-1.05,0]]); break;
-    case 5: poly([[-.35,-1],[.35,-1],[.35,-.35],[1,-.35],[1,.35],[.35,.35],[.35,1],[-.35,1],[-.35,.35],[-1,.35],[-1,-.35],[-.35,-.35]]); break;
-    case 6: { const pts=[]; for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, rr=i%2?.5:1.15; pts.push([Math.cos(a)*rr,Math.sin(a)*rr]); } poly(pts); break; }
-    default: poly([[0,-1.05],[1,-.3],[.62,.9],[-.62,.9],[-1,-.3]]);
-  }
-  c.fill();
-}
-// Dessine un état de la carte : st = { o, c, alive }, got = cases qui viennent de recevoir un point.
-function ryDraw(st,got){
-  const d=remote&&remote.roy; if(!d||!st||!ry.n) return;
-  const n=ry.n, h=ry.h, cs=ry.cs, ctx=ryCtx, dp=ryDpr(), t=performance.now();
-  ctx.setTransform(dp,0,0,dp,0,0); ctx.clearRect(0,0,n*cs,h*cs);
-  const map=d.map, G=new Set(got||[]), danger=new Set();
-  if(remote.status==='playing'&&st.alive) for(const i of Royale.danger({n,h,alive:st.alive},d.eye,d.r0,remote.round||0)) danger.add(i);
-  const pulse=.5+.5*Math.sin(t/220), rr=Math.max(3,cs*.16), inset=Math.max(1,cs*.06);
-  for(let i=0;i<n*h;i++){
-    if(map[i]!=='1') continue;
-    const x=(i%n)*cs, y=Math.floor(i/n)*cs;
-    if(!st.alive[i]){ ctx.fillStyle='rgba(60,70,100,.42)'; ctx.beginPath(); ctx.roundRect?ctx.roundRect(x+inset,y+inset,cs-2*inset,cs-2*inset,rr):ctx.rect(x+inset,y+inset,cs-2*inset,cs-2*inset); ctx.fill(); continue; }
-    const c=st.c[i], o=c>0?st.o[i]:-1, col=o>=0?RY_RGB[o%24]:null;
-    // tuile
-    ctx.fillStyle=col?ryMix(col,.7,RY_PAPER):'#F4F8FF';
-    if(col){ ctx.shadowColor=ryMix(col,.45,[169,195,238]); ctx.shadowOffsetY=Math.max(1,cs*.08); ctx.shadowBlur=0; } else { ctx.shadowColor='#A9C3EE'; ctx.shadowOffsetY=Math.max(1,cs*.08); ctx.shadowBlur=0; }
-    ctx.beginPath(); ctx.roundRect?ctx.roundRect(x+inset,y+inset,cs-2*inset,cs-2*inset,rr):ctx.rect(x+inset,y+inset,cs-2*inset,cs-2*inset); ctx.fill();
-    ctx.shadowColor='transparent'; ctx.shadowOffsetY=0;
-    if(col){ ctx.lineWidth=Math.max(1,cs*.07); ctx.strokeStyle=ryMix(col,.15,[255,255,255]); ctx.stroke(); }
-    // points
-    if(c>0){
-      const k=Math.min(c,4), pos=POS[k], r=Math.max(2.2,cs*.17);
-      ctx.fillStyle=ryCss(o);
-      for(let j=0;j<k;j++){ ryShape(ctx,o%8,x+pos[j][0]/100*cs,y+pos[j][1]/100*cs,r); }
-      if(c>=3){ ctx.fillStyle='rgba(255,255,255,.55)'; for(let j=0;j<k;j++){ ctx.beginPath(); ctx.arc(x+pos[j][0]/100*cs-r*.3,y+pos[j][1]/100*cs-r*.35,r*.28,0,7); ctx.fill(); } }
-      if(c>=4){ ctx.strokeStyle='#FFD93D'; ctx.lineWidth=Math.max(2,cs*.12); ctx.strokeRect(x+inset,y+inset,cs-2*inset,cs-2*inset); }
-    }
-    if(G.has(i)){ ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(2,cs*.12); ctx.beginPath(); ctx.arc(x+cs/2,y+cs/2,cs*.42,0,7); ctx.stroke(); }
-    if(danger.has(i)){ ctx.fillStyle=`rgba(229,56,59,${.18+.22*pulse})`; ctx.fillRect(x+inset,y+inset,cs-2*inset,cs-2*inset); ctx.strokeStyle=`rgba(229,56,59,${.5+.4*pulse})`; ctx.lineWidth=Math.max(1,cs*.07); ctx.strokeRect(x+inset+.5,y+inset+.5,cs-2*inset-1,cs-2*inset-1); }
-    // mes cases : trait blanc intérieur ; ma case choisie : anneau qui pulse
-    if(o===me&&me>=0&&remote.status==='playing'){ ctx.strokeStyle='rgba(27,42,94,.55)'; ctx.lineWidth=Math.max(1,cs*.05); ctx.strokeRect(x+inset*2+.5,y+inset*2+.5,cs-4*inset-1,cs-4*inset-1); }
-    if(ry.sel===i){ ctx.strokeStyle='#1B2A5E'; ctx.lineWidth=Math.max(2,cs*.14); ctx.beginPath(); ctx.arc(x+cs/2,y+cs/2,cs*(.36+.07*pulse),0,7); ctx.stroke(); ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(1,cs*.05); ctx.stroke(); }
-  }
-  // l'œil et le cercle de la zone
-  if(remote.status==='playing'&&d.eye>=0){
-    const ex=(d.eye%n+.5)*cs, ey=(Math.floor(d.eye/n)+.5)*cs, steps=d.steps||0, r=Royale.zoneRadius(d.r0,steps)*cs;
-    ctx.save(); ctx.setLineDash([cs*.4,cs*.3]); ctx.lineWidth=Math.max(2,cs*.1); ctx.strokeStyle='rgba(27,42,94,.55)'; ctx.beginPath(); ctx.arc(ex,ey,r+cs*.5,0,7); ctx.stroke();
-    if(d.next&&d.next-(remote.round||0)<=Royale.ZONE_WARN){ const rn=Royale.zoneRadius(d.r0,steps+1)*cs; ctx.strokeStyle=`rgba(229,56,59,${.6+.35*pulse})`; ctx.beginPath(); ctx.arc(ex,ey,rn+cs*.5,0,7); ctx.stroke(); }
-    ctx.restore();
-    ctx.lineWidth=Math.max(1.5,cs*.08); ctx.strokeStyle='#FFD93D'; ctx.fillStyle='rgba(27,42,94,.8)';
-    ctx.beginPath(); ctx.arc(ex,ey,cs*.13,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(ex,ey,cs*.3,0,7); ctx.stroke();
-  }
-}
-let ryRaf=0;
-function ryLoop(){
-  ryRaf=0;
-  if(!ryOn()||!ry.view) return;
-  if(!ry.anim) ryDraw(ry.view,null);
-  ryRaf=requestAnimationFrame(()=>setTimeout(ryLoop,60));
-}
-function ryKick(){ if(!ryRaf&&ryOn()) ryLoop(); }
-
-const ryColor=i=>ryCss(i);
-const ryName=i=>{ const s=remote.seats[i]; return s&&s.filled?s.name:'—'; };
-function rySwatch(i){ return `<span class="sw" data-sh="${i%8}" style="--pc:${ryColor(i)}"></span>`; }
-
-function ryApply(){
-  const d=remote; if(!d||!d.roy) return;
-  if($('#royale').hidden) show('royale');
-  np=d.np; ry.round=d.round||0;
-  const R=d.roy;
-  if(d.status==='waiting'){ ryRender(); ryKick(); return; }
-  $('#ry-room').hidden=true; $('#ry-play').hidden=false;      // la carte doit être affichée avant de mesurer sa largeur
-  const alive=[...R.alive].map(Number);
-  if(ry.n!==d.n||ry.h!==d.h||!ry.cs){ ry.n=d.n; ry.h=d.h; ry.zoom=1; ryLayout(); ry.view=null; ry.seq=-1; }
-  const nv={o:d.o,c:d.c,alive,seq:d.seq,round:d.round||0};
-  if(d.seq>ry.seq){
-    ry.sel=null;
-    if(ry.view&&d.seq===ry.seq+1&&d.last&&d.last.picks&&!ry.anim){
-      const prev=ry.view, r=Royale.resolve({n:ry.n,h:ry.h,alive:prev.alive,o:prev.o,c:prev.c},d.last.picks,d.last.round-1);
-      ry.seq=d.seq; ryAnimate(r.frames,prev.alive,()=>{ ry.view=nv; ryDraw(ry.view,null); if(d.last.shrunk){ toast('La zone a rétréci : les cases rouges ont disparu.'); } ryAfter(); });
-    } else { ry.view=nv; ry.seq=d.seq; ryDraw(nv,null); }
-  }
-  if(R.mine!==null&&R.mine!==undefined&&ry.sel===null) ry.sel=R.mine;
-  ryRender(); ryKick();
-}
-function ryAfter(){ ry.anim=false; if(remote&&remote.roy&&remote.seq>ry.seq) ryApply(); else ryRender(); maybeRitual(); }
-function ryAnimate(frames,alive,done){
-  ry.anim=true; popK=0; Sfx.place();
-  const delay=reduceMotion()?30:Royale.animDelay(frames.length); let f=0;
-  const step=()=>{
-    if(!ryOn()){ ry.anim=false; return; }
-    const fr=frames[f]; ryDraw({o:fr.o,c:fr.c,alive},fr.got);
-    if(f>0&&fr.c.some(v=>v>=4)===false&&frames[f-1].c.some(v=>v>=4)){ Sfx.pop(popK++); }
-    f++;
-    if(f<frames.length) setTimeout(step,delay); else setTimeout(done,frames.length>1?delay*2:90);
-  };
-  step(); ryRender();
-}
-
-function ryRender(){
-  const d=remote; if(!d||!d.roy) return;
-  const R=d.roy, waiting=d.status==='waiting', over=d.status==='done';
-  $('#ry-room').hidden=!waiting; $('#ry-play').hidden=waiting;
-  $('#ry-leave').textContent=waiting?'← Accueil':'← Mes parties';
-  if(waiting) return ryRenderRoom();
-  const seats=d.seats, T=tally(d.o,d.c,np);
-  const iAm=me>=0, aliveMe=iAm&&T[me].cells>0, tn=now();
-  // en-tête : manche et chrono
-  const humans=seats.filter(s=>s.filled&&!s.bot).length, alive=T.filter(x=>x.cells>0).length;
-  $('#ry-sub').textContent=over?'Partie terminée':`Manche ${ry.round+1} · ${alive} en vie · ${humans} humain${humans>1?'s':''}`;
-  // statut
-  let st;
-  const open=tn>=R.openAt-100;
-  if(over){
-    const w=d.winner, rk=iAm&&d.result?d.result.ranks[me]:0;
-    st=iAm?(w===me?'Victoire ! Tu es le dernier survivant.':`Terminé : tu finis ${ord(rk)} sur ${np}.`):`${ryName(w)} gagne la partie.`;
-    if(iAm&&d.result&&d.result.ranked&&d.result.delta) { const dl=d.result.delta[me]; st+=` Élo ${dl>=0?'+':'−'}${Math.abs(dl)}.`; }
-    else if(iAm&&d.result&&!d.result.ranked&&d.ranked) st+=' Pas d’Élo : il faut au moins deux joueurs réels.';
-  } else if(!iAm) st='Tu regardes la partie.';
-  else if(!aliveMe) st='Tu es éliminé. Tu regardes la fin de la partie.';
-  else if(ry.anim||!open) st=ry.round===0&&!ry.anim?'La partie démarre : repère tes cases.':'Les débordements se propagent…';
-  else if(ry.sel!==null&&ry.sel!==undefined) st='Case choisie. Tu peux encore changer avant la fin du chrono.';
-  else st='Touche une de tes cases pour y poser un point.';
-  if(!over&&iAm&&aliveMe&&R.absent>0) st+=` (${R.absent} manche${R.absent>1?'s':''} sans choix : 3 et tu es éliminé)`;
-  $('#ry-status').textContent=st;
-  $('#ry-status').classList.toggle('mine',!over&&aliveMe&&open&&!ry.anim&&(ry.sel===null||ry.sel===undefined));
-  // zone
-  const left=R.next?R.next-ry.round:0, zn=$('#ry-zone');
-  if(over) zn.textContent='';
-  else if(!R.steps&&R.next) zn.textContent=left>1?`La zone commence à rétrécir dans ${left} manches (à la manche ${R.next}).`:'La zone rétrécit à la fin de cette manche : les cases rouges disparaîtront.';
-  else if(R.next) zn.textContent=left<=1?'La zone rétrécit à la fin de cette manche : les cases rouges disparaîtront.':`La zone rétrécit dans ${left} manches.`;
-  else zn.textContent='La zone est à son minimum : le dernier survivant gagne.';
-  zn.classList.toggle('urgent',!over&&R.next&&left<=1);
-  // classement
-  const idx=[...Array(np).keys()], fin=over&&d.result&&d.result.ranks;
-  idx.sort((a,b)=>{ if(fin&&fin[a]!==fin[b]) return fin[a]-fin[b]; const aa=T[a].cells>0, ab=T[b].cells>0; if(aa!==ab) return aa?-1:1; return T[b].cells-T[a].cells||T[b].points-T[a].points||a-b; });
-  const f=seats.some(s=>!s.filled)?0:1; void f;
-  $('#ry-listt').textContent=over?'Classement final':'Joueurs';
-  $('#ry-list').innerHTML=idx.map((i,k)=>{
-    const s=seats[i], out=T[i].cells===0, ok=!over&&!out&&!s.bot&&R.picked&&R.picked[i]==='1';
-    return `<li class="${i===me?'me':''}${out?' out':''}">${rySwatch(i)}<span class="nm">${esc(s.name||'—')}${i===me?' (toi)':''}</span><span class="st">${out?'':T[i].cells+' c. · '+T[i].points+' pt'+(T[i].points>1?'s':'')}</span><span class="ok" title="${ok?'a choisi':''}">${ok?'✓':''}</span><span class="rk">${fin?fin[i]:out?'':k+1}</span></li>`;
-  }).join('');
-  $('#ry-resign').hidden=!(iAm&&aliveMe&&!over);
-  ryClock();
-}
-const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function ryRenderRoom(){
-  const d=remote, R=d.roy, host=d.host===me;
-  $('#ry-code').textContent=code||'';
-  $('#ry-sub').textContent=`${d.np} joueurs · ${d.ranked?'classée':'amicale'}`;
-  const humans=d.seats.filter(s=>s.filled&&!s.bot).length;
-  $('#ry-roomnote').textContent=`${humans} joueur${humans>1?'s':''} dans la salle. Les ${d.np-humans} places libres seront prises par des IA au départ. Partage le lien pour inviter des amis.`;
-  $('#ry-seats').innerHTML=d.seats.map((s,i)=>s.filled&&!s.bot?`<div class="ry-seat${i===me?' me':''}">${rySwatch(i)}<span class="nm">${esc(s.name)}${i===me?' (toi)':''}</span></div>`:`<div class="ry-seat empty"><span class="nm">place libre</span></div>`).join('');
-  $('#ry-start').hidden=!host;
-  $('#ry-quit').hidden=me<0;
-  $('#ry-clock').hidden=true; $('#ry-bar').hidden=true;
-  ryClock();
-}
-function ryClock(){
-  const d=remote; if(!d||!d.roy||$('#royale').hidden) return;
-  const R=d.roy, tn=now(), cnt=$('#ry-count'), clk=$('#ry-clock'), bar=$('#ry-bar');
-  if(d.status==='waiting'){
-    const left=Math.max(0,R.startAt-tn), s=Math.ceil(left/1000);
-    cnt.textContent=left>0?`Départ dans ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`:'Départ…';
-    clk.hidden=true; bar.hidden=true; return;
-  }
-  if(d.status!=='playing'){ clk.hidden=true; bar.hidden=true; return; }
-  const total=Math.max(1,d.deadline-R.openAt), leftMs=d.deadline-tn, open=tn>=R.openAt-100;
-  clk.hidden=false; bar.hidden=false;
-  if(!open){ clk.className='ry-clock wait'; $('#ry-clock').innerHTML='<b id="ry-t">…</b>'; $('#ry-bari').style.width='100%'; bar.classList.remove('low'); return; }
-  const s=Math.max(0,Math.ceil(leftMs/1000));
-  clk.className='ry-clock'+(s<=3?' low':''); clk.innerHTML=`<b id="ry-t">${s}</b><small>s</small>`;
-  $('#ry-bari').style.width=Math.max(0,Math.min(100,leftMs/total*100))+'%'; bar.classList.toggle('low',s<=3);
-  if(!ry.anim&&$('#ry-status').textContent.startsWith('Les débordements')) ryRender();
-}
-setInterval(()=>{ if(ryOn()) ryClock(); },250);
-
-async function ryPick(i){
-  const d=remote; if(!ryOn()||d.status!=='playing'||me<0||ry.anim||!ry.view) return;
-  if(now()<d.roy.openAt-100) return;
-  const v=ry.view;
-  if(!(v.o[i]===me&&v.c[i]>0&&v.alive[i])){
-    const o=v.c[i]>0?v.o[i]:-1;
-    ry.info=o>=0?`${ryName(o)} · ${v.c[i]} point${v.c[i]>1?'s':''}`:v.alive[i]?'Case vide':'';
-    $('#ry-info').textContent=ry.info; return;
-  }
-  const before=ry.sel; ry.sel=i; $('#ry-info').textContent=''; Sfx.place(); ryRender();
-  try{ await Net.call('rpick',{code,i}); }
-  catch(e){ ry.sel=before; ryRender(); if(e.code!=='too_soon') toast(errMsg(e)); }
-}
-ryCv.addEventListener('click',e=>{
-  if(!ry.cs) return;
-  const r=ryCv.getBoundingClientRect(), x=Math.floor((e.clientX-r.left)/ry.cs), y=Math.floor((e.clientY-r.top)/ry.cs);
-  if(x<0||y<0||x>=ry.n||y>=ry.h) return;
-  ryPick(y*ry.n+x);
-});
-$('#ry-zin').addEventListener('click',()=>{ ry.zoom=Math.min(2.6,ry.zoom+.4); ryLayout(); if(ry.view) ryDraw(ry.view,null); });
-$('#ry-zout').addEventListener('click',()=>{ ry.zoom=Math.max(1,ry.zoom-.4); ryLayout(); if(ry.view) ryDraw(ry.view,null); });
-$('#ry-me').addEventListener('click',()=>{
-  if(!ry.view||me<0) return; const v=ry.view; let sx=0,sy=0,k=0;
-  for(let i=0;i<v.o.length;i++) if(v.o[i]===me&&v.c[i]>0){ sx+=i%ry.n; sy+=Math.floor(i/ry.n); k++; }
-  if(!k) return; const sc=$('#ry-scroll');
-  sc.scrollTo({left:(sx/k+.5)*ry.cs-sc.clientWidth/2,top:(sy/k+.5)*ry.cs-sc.clientHeight/2,behavior:reduceMotion()?'auto':'smooth'});
-});
-{ let rw=0; const fit=()=>{ const w=$('#ry-scroll').clientWidth; if(!ryOn()||!ry.n||!w||w===rw) return; rw=w; ryLayout(); if(ry.view) ryDraw(ry.view,null); };
-  window.addEventListener('resize',fit); if(window.ResizeObserver) new ResizeObserver(fit).observe($('#ry-scroll')); }
-let ryResignT=null;
-$('#ry-resign').addEventListener('click',async()=>{
-  const b=$('#ry-resign');
-  if(!ryResignT){ b.textContent='Confirmer l’abandon'; ryResignT=setTimeout(()=>{ ryResignT=null; b.textContent='Abandonner'; },4000); return; }
-  clearTimeout(ryResignT); ryResignT=null; b.textContent='Abandonner';
-  try{ await Net.call('resign',{code}); }catch(e){ toast(errMsg(e)); }
-});
-$('#ry-start').addEventListener('click',act('start'));
-$('#ry-quit').addEventListener('click',async()=>{ try{ await Net.call('leave',{code}); }catch(e){} leaveRoyale(); });
-$('#ry-leave').addEventListener('click',leaveRoyale);
-function leaveRoyale(){ ry.n=0; ry.cs=0; ry.view=null; ry.seq=-1; ry.sel=null; ry.anim=false; leave(); }
-$('#ry-copy').addEventListener('click',async()=>{
-  try{ await navigator.clipboard.writeText(location.origin+location.pathname+'#'+code); $('#ry-copy').textContent='Lien copié'; setTimeout(()=>{ $('#ry-copy').textContent='Copier le lien'; },1800); }
-  catch(e){ toast('Copie impossible : le code de la salle est '+code); }
-});
-$('#ry-go').addEventListener('click',async()=>{
-  $('#ry-err').textContent=''; $('#ry-go').disabled=true;
-  try{ const r=await Net.call('create',{royale:true,np:+$('#ry-np').value,ranked:$('#ry-ranked').checked,public:$('#ry-public').checked}); enterGame(r.code); }
-  catch(e){ $('#ry-err').textContent=errMsg(e); }
-  $('#ry-go').disabled=false;
-});
-
 /* ---------- démarrage ---------- */
 window.addEventListener('hashchange',()=>{          // un lien collé dans un onglet déjà ouvert
   if(location.hash==='#conquete'&&online&&mode==='lobby'){ openConquest(); return; }
@@ -2491,7 +2125,7 @@ window.addEventListener('hashchange',()=>{          // un lien collé dans un on
 fillSizes(); updateModeNote();
 $('#name').value=ls.get('propagation:name')||'';
 Net.on('state',st=>{
-  if(st==='ready'){ online=true; $('#rycard').hidden=!(Net.features&&Net.features.royale); fillLevels(); Notif.sync(); sendVis(); $('#net').textContent=''; busy(false); updateModeNote(); renderProfile(Net.profile); }
+  if(st==='ready'){ online=true; fillLevels(); Notif.sync(); sendVis(); $('#net').textContent=''; busy(false); updateModeNote(); renderProfile(Net.profile); }
   else if(st==='down'){ online=false; Notif.render(); busy(false); $('#net').textContent='Connexion perdue, reconnexion…'; }
   else if(st==='authfail'){ online=false; busy(false); $('#net').textContent='Compte non reconnu par le serveur. Utilise ton code de récupération.'; }
 });
