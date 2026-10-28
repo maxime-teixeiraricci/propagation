@@ -64,6 +64,19 @@ Un mode à part, depuis la carte « Conquête » de l'accueil. Les règles :
 
 Ce mode demande une sauvegarde durable (voir « Garder les parties ») : sans elle, la carte est remise à zéro à chaque redémarrage du serveur. Les réglages (tailles, niveaux d'IA, points de vie, bonus) sont en haut de `conquest.js`.
 
+## Tournois (élimination directe, sur plusieurs jours)
+
+Un mode à part, depuis la carte « Tournois » de l'accueil.
+
+- **Créer :** nom, 4, 8 ou 16 participants, 24 h, 2 ou 3 jours par tour, grille 5, 6 ou 8, niveau des IA pour les places libres, public ou privé. Un tournoi privé se rejoint avec son code (5 caractères, qui commence par T) ou son lien.
+- **Démarrer :** dès que toutes les places sont prises, ou quand le créateur le lance (les places libres sont alors prises par des IA de niveaux voisins). Le tirage au sort forme les duels.
+- **Un duel par tour,** en 1 contre 1, sur une vraie partie. Contre une IA, la partie est rapide ; contre un humain, chacun a jusqu'à 24 h par coup (ou la durée du tour si elle est plus courte). Les duels entre deux IA sont tranchés d'après leurs Élo.
+- **Fin du tour :** quand tous les duels sont terminés, le tour suivant commence. À l'échéance du tour, un duel pas fini est tranché aux points (3 par case + les points posés), puis à l'Élo en cas d'égalité.
+- **Le vainqueur** gagne un trophée sur son profil. Les duels sont non classés : ils ne changent pas l'Élo.
+- **Limites :** 5 tournois en cours par joueur, 600 au total. Un tournoi qui n'a pas démarré au bout de 7 jours est supprimé, un tournoi terminé au bout de 30 jours.
+
+Ce mode demande aussi une sauvegarde durable. Les réglages sont en haut de la partie « tournois » de `server.js`.
+
 ## Notifications « c'est ton tour »
 
 Quand c'est à toi de jouer dans une partie que tu n'affiches pas (accueil, carte de conquête, autre partie), un bandeau jaune apparaît en haut de la page : un clic ouvre la partie.

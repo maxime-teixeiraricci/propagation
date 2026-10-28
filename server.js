@@ -247,6 +247,7 @@ function finish(g) {
   }
   g.result = res;
   if (g.cq) conquestResolve(g);
+  if (g.tour) tourReport(g);
   for (const pid of g.players) if (pid) pushProfile(pid);
 }
 /* ======================= joueurs IA ======================= */
@@ -358,7 +359,7 @@ function viewFor(g, pid) {
       return { filled: !!p, name: cq && w.bot ? cqDefName(g) : w ? w.name : '', rating: cq ? null : w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1,
         el: cq ? (w.bot ? g.cq.def : g.cq.team) : undefined };
     }),
-    me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result, cq: g.cq ? cqView(g) : null
+    me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result, cq: g.cq ? cqView(g) : null, tour: g.tour ? tourBrief(g) : null
   };
 }
 function summary(g, pid) {
@@ -367,7 +368,7 @@ function summary(g, pid) {
     code: g.code, n: g.n, h: g.h || g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status, me,
     turn: g.turn, winner: g.winner, deadline: g.deadline, updated: g.updated,
     names: g.players.map(p => { const w = who(p); return w ? (g.cq && w.bot ? cqDefName(g) : w.name) : ''; }),
-    cq: g.cq ? { name: Conq.ZONE[g.cq.zone].name, team: g.cq.team } : null,
+    cq: g.cq ? { name: Conq.ZONE[g.cq.zone].name, team: g.cq.team } : null, tour: g.tour ? tourBrief(g) : null,
     filled: g.players.filter(Boolean).length, humans: g.players.filter(p => p && !isBot(p)).length, teams: g.teams || 0,
     result: g.result && me >= 0 ? { rank: g.result.ranks[me], delta: g.result.delta ? g.result.delta[me] : null, ranked: g.result.ranked } : null
   };
@@ -493,6 +494,135 @@ function startGame(g) {
 function maybeAutoStart(g) {
   if (g.status === 'waiting' && g.auto && g.players.length >= 2 && g.players.every(Boolean)) startGame(g);
 }
+
+/* ======================= Tournois ======================= */
+// Élimination directe sur plusieurs jours : des duels 1 contre 1, un tour après l'autre. Les places vides sont prises par des IA.
+// Un tournoi tient dans une entrée « t:CODE » ; chaque match est une vraie partie (g.tour = { code, round, i }).
+const TOUR_SIZES = [4, 8, 16], TOUR_ROUND_H = [24, 48, 72], TCODE_RE = /^T[A-HJ-NP-Z2-9]{4}$/;
+const TOUR_ROUND_TEST = TEST && Number(process.env.TOUR_ROUND_MS) >= 300 ? Number(process.env.TOUR_ROUND_MS) : 0;
+const tourOf = code => meta.get('t:' + String(code || '').toUpperCase());
+const allTours = () => { const r = []; for (const [k, v] of meta) if (k.startsWith('t:')) r.push(v); return r; };
+const saveT = t => markM('t:' + t.code);
+const tourStage = (t, r) => { const left = Math.log2(t.size) - r; return left <= 1 ? 'Finale' : left === 2 ? 'Demi-finales' : left === 3 ? 'Quarts de finale' : 'Huitièmes de finale'; };
+const tourElo = e => { const w = who(e); return w ? w.elo : 0; };
+function tourBrief(g) { const t = tourOf(g.tour.code); return t ? { code: t.code, name: t.name, round: g.tour.round, stage: tourStage(t, g.tour.round), deadline: t.deadline || null, status: t.status } : null; }
+function tourCreate(c, m) {
+  const size = Number(m.size);
+  if (!TOUR_SIZES.includes(size)) throw new Err('invalid');
+  const h = Number(m.hours), roundMs = TOUR_ROUND_TEST || (TOUR_ROUND_H.includes(h) ? h : 48) * 3600000;
+  const n = E.SIZES[2].slice(0, 3).includes(Number(m.n)) ? Number(m.n) : E.SIZES[2][3];
+  const ai = Math.min(Bot.LEVELS.length, Math.max(1, Math.floor(Number(m.ai)) || 4));
+  if (allTours().filter(t => t.status !== 'done' && (t.entrants.includes(c.pid) || t.host === c.pid)).length >= 5) throw new Err('too_many');
+  if (allTours().length >= 600) throw new Err('full');
+  let code = '';
+  for (let k = 0; k < 50; k++) { let x = 'T'; for (let i = 0; i < 4; i++) x += ALPHABET[rnd(ALPHABET.length)]; if (!meta.has('t:' + x)) { code = x; break; } }
+  if (!code) throw new Err('full');
+  const p = players.get(c.pid);
+  const t = { code, name: clean(m.name) || 'Tournoi de ' + p.name, host: c.pid, size, roundMs, n, ai, public: m.public !== false, status: 'open',
+    created: Date.now(), entrants: [c.pid], bracket: null, round: 0, deadline: null, champion: null };
+  meta.set('t:' + code, t); saveT(t);
+  return { code };
+}
+function tourStart(t) {
+  if (t.status !== 'open') throw new Err('forbidden');
+  const ents = t.entrants.slice();
+  for (let k = 0; ents.length < t.size; k++) ents.push(`bot:${Math.min(Bot.LEVELS.length, Math.max(1, t.ai + (k % 3) - 1))}:${k}`);   // IA de niveaux voisins
+  for (let k = ents.length - 1; k > 0; k--) { const j = rnd(k + 1); [ents[k], ents[j]] = [ents[j], ents[k]]; }
+  t.status = 'running'; t.startedAt = Date.now(); t.round = 0; t.bracket = [pairUp(ents)];
+  tourLaunch(t);
+}
+const pairUp = list => { const r = []; for (let i = 0; i < list.length; i += 2) r.push({ a: list[i], b: list[i + 1], code: null, w: null }); return r; };
+function botDuel(a, b) {                                  // deux IA : le résultat est tiré au sort d'après leurs Élo
+  const pa = 1 / (1 + Math.pow(10, (tourElo(b) - tourElo(a)) / (400 * ELO_SCALE)));
+  return rnd(100000) / 100000 < pa ? a : b;
+}
+function tourLaunch(t) {                                  // crée les parties du tour courant
+  const r = t.round, rd = t.bracket[r];
+  t.deadline = Date.now() + t.roundMs;
+  rd.forEach((m, i) => {
+    if (m.w) return;
+    if (isBot(m.a) && isBot(m.b)) { m.w = botDuel(m.a, m.b); return; }
+    tourGame(t, r, i, m);
+  });
+  saveT(t); tourCheck(t);
+}
+function tourGame(t, r, i, m) {
+  let code = '';
+  for (let k = 0; k < 50; k++) { let s2 = ''; for (let q = 0; q < 4; q++) s2 += ALPHABET[rnd(ALPHABET.length)]; if (!games.has(s2)) { code = s2; break; } }
+  if (!code) return;
+  const bot = [m.a, m.b].find(isBot), ai = bot ? botLevel(bot) : 0, b = E.newBoard(t.n, 2, rnd(2)), now = Date.now();
+  const g = { code, n: t.n, np: 2, mode: ai ? 'live' : 'long', turnMs: ai ? 0 : Math.min(DAY, t.roundMs), ranked: false, status: 'waiting', players: [m.a, m.b],
+    o: b.o, c: b.c, turn: rnd(2), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now,
+    host: [m.a, m.b].find(x => !isBot(x)), teams: 0, sudden: false, dead: 0, round: 0, public: false, auto: false, ai, tour: { code: t.code, round: r, i } };
+  startPlaying(g); games.set(code, g); markG(g); m.code = code;
+  pushGame(g);
+  for (const pid of [m.a, m.b]) if (!isBot(pid) && g.players[g.turn] !== pid && !playerHere(pid, code)) notifyPid(pid, 3600).catch(() => {});
+}
+// Un match terminé : le vainqueur avance. Quand tout le tour est joué, le suivant commence ; après la finale, le tournoi est fini.
+function tourReport(g) {
+  const t = tourOf(g.tour.code); if (!t || t.status !== 'running') return;
+  const m = t.bracket[g.tour.round] && t.bracket[g.tour.round][g.tour.i];
+  if (!m || m.w || g.winner < 0) return;
+  m.w = g.players[g.winner]; saveT(t); tourCheck(t);
+}
+function tourCheck(t) {
+  if (t.status !== 'running') return;
+  const rd = t.bracket[t.round];
+  if (rd.some(m => !m.w)) return;
+  if (rd.length === 1) {
+    t.champion = rd[0].w; t.status = 'done'; t.finished = Date.now(); t.deadline = null;
+    const p = !isBot(t.champion) && players.get(t.champion);
+    if (p) { p.trophies = (p.trophies || 0) + 1; markP(p.pid); pushProfile(p.pid); }
+    saveT(t);
+    for (const pid of t.entrants) if (!playerHere(pid, t.code)) notifyPid(pid, 86400).catch(() => {});
+    return;
+  }
+  t.round++; t.bracket.push(pairUp(rd.map(m => m.w)));
+  tourLaunch(t);
+}
+function tourDeadline(t) {                                // échéance du tour : les matchs non finis sont décidés aux points
+  const rd = t.bracket[t.round];
+  rd.forEach(m => {
+    if (m.w) return;
+    const g = m.code ? games.get(m.code) : null;
+    if (!g || g.status === 'done') { m.w = g && g.winner >= 0 ? g.players[g.winner] : tourElo(m.a) >= tourElo(m.b) ? m.a : m.b; return; }
+    const val = x => { let v = 0; for (let k = 0; k < g.c.length; k++) if (g.o[k] === x && g.c[k] > 0) v += 3 + g.c[k]; return v; };
+    const v0 = val(0), v1 = val(1);
+    const loser = v0 < v1 ? 0 : v1 < v0 ? 1 : tourElo(g.players[0]) >= tourElo(g.players[1]) ? 1 : 0;     // à égalité : le mieux classé passe
+    eliminate(g, loser); pushGame(g);
+  });
+  saveT(t); tourCheck(t);
+}
+function tourTick(now) {
+  for (const t of allTours()) {
+    if (t.status === 'running' && t.deadline && now > t.deadline) { log(`tournoi ${t.code} : échéance du tour ${t.round + 1}`); try { tourDeadline(t); } catch (e) { console.error('tournoi :', e); } }
+    else if (t.status === 'open' && now - t.created > 7 * DAY) { meta.delete('t:' + t.code); saveT(t); }
+    else if (t.status === 'done' && now - (t.finished || t.created) > 30 * DAY) { meta.delete('t:' + t.code); saveT(t); }
+  }
+}
+function tourNm(e, pid) { if (!e) return null; const w = who(e); return w ? { name: w.name, elo: w.elo, bot: w.bot, me: e === pid } : { name: '?', elo: 0, bot: false, me: false }; }
+function tourMyMatch(t, pid) {
+  if (t.status !== 'running') return null;
+  const rd = t.bracket[t.round];
+  for (let i = 0; i < rd.length; i++) { const m = rd[i]; if (!m.w && (m.a === pid || m.b === pid) && m.code) { const g = games.get(m.code); return { code: m.code, round: t.round, i, turn: !!(g && g.status === 'playing' && g.players[g.turn] === pid), deadline: g ? g.deadline : null }; } }
+  return null;
+}
+function tourView(t, pid) {
+  const total = Math.log2(t.size), rounds = [];
+  for (let r = 0; r < total; r++) {
+    const rd = t.bracket && t.bracket[r];
+    rounds.push({ stage: tourStage(t, r), matches: rd ? rd.map(m => ({ a: tourNm(m.a, pid), b: tourNm(m.b, pid), w: m.w ? (m.w === m.a ? 0 : 1) : null, mine: m.a === pid || m.b === pid, code: (m.a === pid || m.b === pid) && !m.w ? m.code : null })) : [] });
+  }
+  return { code: t.code, name: t.name, status: t.status, size: t.size, n: t.n, roundMs: t.roundMs, ai: t.ai, public: t.public, host: t.host === pid, hostName: (who(t.host) || {}).name || '',
+    entrants: t.entrants.map(e => tourNm(e, pid)), inside: t.entrants.includes(pid), round: t.round, stage: t.bracket ? tourStage(t, t.round) : null, rounds,
+    deadline: t.deadline, champion: t.champion ? tourNm(t.champion, pid) : null, my: tourMyMatch(t, pid), created: t.created, now: Date.now() };
+}
+function tourSummary(t, pid) {
+  const my = tourMyMatch(t, pid);
+  return { code: t.code, name: t.name, size: t.size, filled: t.entrants.length, status: t.status, hours: Math.round(t.roundMs / 3600000), n: t.n,
+    host: (who(t.host) || {}).name || '', stage: t.bracket ? tourStage(t, t.round) : null, deadline: t.deadline, turn: !!(my && my.turn), playing: !!my,
+    champion: t.champion ? tourNm(t.champion, pid) : null, inside: t.entrants.includes(pid), created: t.created };
+}
 function lobbyOf(c, m) {                           // la salle d'attente de c, dont c est le créateur
   const g = games.get(String(m.code || '').toUpperCase());
   if (!g) throw new Err('not_found');
@@ -513,7 +643,7 @@ const OPS = {
       players.set(pid, p); markP(pid);
     }
     c.pid = pid;
-    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, conquest: true, vapid: vapid ? vapid.pub : null, bots: Bot.LEVELS } };
+    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, conquest: true, tournament: true, vapid: vapid ? vapid.pub : null, bots: Bot.LEVELS } };
   },
   name(c, m) {
     const nm = clean(m.name); if (!nm) throw new Err('invalid');
@@ -669,7 +799,7 @@ const OPS = {
   rematch(c, m) {
     const g = games.get(String(m.code || '').toUpperCase());
     if (!g) throw new Err('not_found');
-    if (g.status !== 'done' || !g.players.includes(c.pid) || g.cq) throw new Err('forbidden');
+    if (g.status !== 'done' || !g.players.includes(c.pid) || g.cq || g.tour) throw new Err('forbidden');
     resetBoard(g, g.np);
     g.seq++; g.updated = Date.now();
     startPlaying(g); markG(g); pushGame(g);
@@ -777,6 +907,46 @@ const OPS = {
     startPlaying(g); games.set(code, g); markG(g); scheduleBot(g);
     return { code };
   },
+  tcreate(c, m) { return tourCreate(c, m); },
+  tjoin(c, m) {
+    const t = tourOf(m.code); if (!t) throw new Err('not_found');
+    if (t.status !== 'open') throw new Err('forbidden');
+    if (!t.entrants.includes(c.pid)) {
+      if (t.entrants.length >= t.size) throw new Err('full');
+      if (allTours().filter(x => x.status !== 'done' && x.entrants.includes(c.pid)).length >= 5) throw new Err('too_many');
+      t.entrants.push(c.pid); saveT(t);
+      if (t.entrants.length === t.size) tourStart(t);
+    }
+    return {};
+  },
+  tleave(c, m) {
+    const t = tourOf(m.code); if (!t) throw new Err('not_found');
+    if (t.status !== 'open' || !t.entrants.includes(c.pid)) throw new Err('forbidden');
+    t.entrants = t.entrants.filter(x => x !== c.pid);
+    if (!t.entrants.length) { meta.delete('t:' + t.code); saveT(t); return {}; }
+    if (t.host === c.pid) t.host = t.entrants[0];
+    saveT(t); return {};
+  },
+  tstart(c, m) {
+    const t = tourOf(m.code); if (!t) throw new Err('not_found');
+    if (t.host !== c.pid || t.status !== 'open') throw new Err('forbidden');
+    tourStart(t); return {};
+  },
+  tview(c, m) {
+    const t = tourOf(m.code); if (!t) throw new Err('not_found');
+    return { tour: tourView(t, c.pid) };
+  },
+  tlist(c) {
+    const mine = [], open = [], p = players.get(c.pid), now = Date.now();
+    for (const t of allTours()) {
+      const inside = t.entrants.includes(c.pid);
+      if (inside) { if (t.status !== 'done' || now - (t.finished || 0) < 3 * DAY) mine.push(tourSummary(t, c.pid)); }
+      else if (t.status === 'open' && t.public && t.entrants.length < t.size) open.push(tourSummary(t, c.pid));
+    }
+    mine.sort((a, b) => (b.turn - a.turn) || (b.playing - a.playing) || b.created - a.created);
+    open.sort((a, b) => b.created - a.created);
+    return { mine, open: open.slice(0, 20), trophies: p.trophies || 0 };
+  },
   top(c) {
     const all = [...players.values()].filter(p => p.games > 0).sort((a, b) => b.elo - a.elo || b.games - a.games);
     const top = all.slice(0, 20).map(p => ({ name: p.name, elo: p.elo, games: p.games, wins: p.wins, me: p.pid === c.pid }));
@@ -807,6 +977,7 @@ function tick() {
   const now = Date.now();
   try { getWorld(now); } catch (e) { console.error('conquête :', e); }
   remindTurns(now);
+  tourTick(now);
   for (const g of [...games.values()]) {
     if (g.status === 'playing') scheduleBot(g);                // reprise après un redémarrage
     if (g.status === 'playing' && g.mode === 'long' && g.deadline && now > g.deadline) {
@@ -815,11 +986,12 @@ function tick() {
     }
     if (g.status === 'waiting' && now - g.created > 7 * DAY) dropGame(g.code);
     else if (g.status === 'done' && now - g.updated > 30 * DAY) dropGame(g.code);
-    else if (g.status === 'playing' && g.mode === 'live' && now - g.updated > 3 * DAY) dropGame(g.code);
+    else if (g.status === 'playing' && g.mode === 'live' && !g.tour && now - g.updated > 3 * DAY) dropGame(g.code);
   }
 }
 function applyGrace() {   // après un redémarrage (ou un réveil), chacun garde au moins GRACE_MS pour jouer
   const now = Date.now();
+  for (const t of allTours()) if (t.status === 'running' && t.deadline && t.deadline < now + GRACE_MS) { t.deadline = now + GRACE_MS; saveT(t); }
   for (const g of games.values()) if (g.status === 'playing' && g.mode === 'long' && g.deadline && g.deadline < now + GRACE_MS) { g.deadline = now + GRACE_MS; markG(g); }
 }
 
