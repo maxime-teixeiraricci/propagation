@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const E = require('./engine.js');
+const Roy = require('./royale.js');
 const Bot = require('./bot.js');
 const Conq = require('./conquest.js');
 
@@ -217,6 +218,16 @@ function teamRanks(g) {
   }
   return key.map(k => 1 + key.filter(o => o > k).length);
 }
+// Royale : l'Élo ne se joue qu'entre joueurs réels (les IA de remplissage n'ont pas d'Élo comparable). Il faut au moins deux humains.
+function royElo(g, ranks, res) {
+  if (!g.ranked) return;
+  const ws = g.players.map(who), hs = [];
+  ws.forEach((x, i) => { if (x && !x.bot) hs.push(i); });
+  if (hs.length < 2) return;
+  const before = ws.map(x => x.elo), d = E.eloDeltas(hs.map(i => before[i]), hs.map(i => ranks[i]), K_FACTOR, ELO_SCALE), after = before.slice();
+  hs.forEach((i, k) => { const p = ws[i].p; p.elo = Math.max(MIN_ELO, before[i] + d[k]); p.games++; if (g.winner === i) p.wins++; after[i] = p.elo; markP(p.pid); });
+  Object.assign(res, { ranked: true, before, after, delta: after.map((a, i) => a - before[i]) });
+}
 function finish(g) {
   if (g.status === 'done') return;
   g.status = 'done'; g.deadline = null;
@@ -224,7 +235,8 @@ function finish(g) {
   const tr = T ? teamRanks(g) : null;
   const ranks = T ? Array.from({ length: g.np }, (_, x) => tr[x % T]) : E.ranksFrom(g.np, g.winner, g.elim);
   const res = { ranks, ranked: false, before: null, after: null, delta: null };
-  if (g.ranked && g.np >= 2 && g.players.every(Boolean) && new Set(g.players).size === g.np) {
+  if (g.roy) royElo(g, ranks, res);
+  else if (g.ranked && g.np >= 2 && g.players.every(Boolean) && new Set(g.players).size === g.np) {
     const ws = g.players.map(who);
     if (ws.every(Boolean) && ws.some(x => !x.bot)) {
       const before = ws.map(x => x.elo);
@@ -358,7 +370,7 @@ function viewFor(g, pid) {
       return { filled: !!p, name: cq && w.bot ? cqDefName(g) : w ? w.name : '', rating: cq ? null : w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1,
         el: cq ? (w.bot ? g.cq.def : g.cq.team) : undefined };
     }),
-    me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result, cq: g.cq ? cqView(g) : null
+    me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result, cq: g.cq ? cqView(g) : null, roy: g.roy ? royView(g, pid) : null
   };
 }
 function summary(g, pid) {
@@ -367,7 +379,7 @@ function summary(g, pid) {
     code: g.code, n: g.n, h: g.h || g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status, me,
     turn: g.turn, winner: g.winner, deadline: g.deadline, updated: g.updated,
     names: g.players.map(p => { const w = who(p); return w ? (g.cq && w.bot ? cqDefName(g) : w.name) : ''; }),
-    cq: g.cq ? { name: Conq.ZONE[g.cq.zone].name, team: g.cq.team } : null,
+    cq: g.cq ? { name: Conq.ZONE[g.cq.zone].name, team: g.cq.team } : null, roy: !!g.roy,
     filled: g.players.filter(Boolean).length, humans: g.players.filter(p => p && !isBot(p)).length, teams: g.teams || 0,
     result: g.result && me >= 0 ? { rank: g.result.ranks[me], delta: g.result.delta ? g.result.delta[me] : null, ranked: g.result.ranked } : null
   };
@@ -491,12 +503,123 @@ function startGame(g) {
 }
 // Option « lancer dès que toutes les places sont prises » (cochée par défaut à la création).
 function maybeAutoStart(g) {
+  if (g.roy) { if (g.status === 'waiting' && g.players.every(x => x && !isBot(x))) royStart(g); return; }
   if (g.status === 'waiting' && g.auto && g.players.length >= 2 && g.players.every(Boolean)) startGame(g);
 }
-function lobbyOf(c, m) {                           // la salle d'attente de c, dont c est le créateur
+
+/* ======================= Royale ======================= */
+// 16 à 24 joueurs, manches simultanées : chacun choisit une case, puis tout se résout d'un coup. Voir royale.js.
+const ROY_MS = TEST && Number(process.env.ROY_MS) >= 200 ? Number(process.env.ROY_MS) : Roy.ROUND_MS;
+const ROY_WAIT_MS = TEST && Number(process.env.ROY_WAIT_MS) >= 100 ? Number(process.env.ROY_WAIT_MS) : 120000;     // salle ouverte avant le départ
+const ROY_INTRO_MS = TEST ? 300 : 4000;                                                                           // temps pour regarder la carte
+const ROY_ABSENT = 3;                                                                                            // manches ratées de suite avant l'élimination
+function royCreate(c, m) {
+  const np = Number(m.np);
+  if (!Roy.SIZES.includes(np)) throw new Err('invalid');
+  if (activeCount(c.pid) >= MAX_ACTIVE_PER_PLAYER) throw new Err('too_many');
+  if (games.size >= MAX_GAMES) throw new Err('full');
+  let code = '';
+  for (let t = 0; t < 50; t++) { let s2 = ''; for (let i = 0; i < 4; i++) s2 += ALPHABET[rnd(ALPHABET.length)]; if (!games.has(s2)) { code = s2; break; } }
+  if (!code) throw new Err('full');
+  const now = Date.now();
+  const g = { code, n: 20, h: 20, np, mode: 'live', turnMs: 0, ranked: m.ranked !== false, status: 'waiting', players: new Array(np).fill(null),
+    o: [], c: [], turn: -1, seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0,
+    sudden: false, dead: 0, round: 0, public: m.public !== false, auto: false,
+    roy: { startAt: now + ROY_WAIT_MS, roundMs: ROY_MS, openAt: null, picks: {}, missed: [], map: null, alive: null, eye: -1, r0: 0 } };
+  g.players[0] = c.pid;
+  games.set(code, g); markG(g);
+  return { code };
+}
+function royBegin(g, wait) {                       // ouvre une manche : les choix sont possibles après l'animation précédente
+  const now = Date.now();
+  g.roy.picks = {}; g.roy.openAt = now + wait; g.deadline = now + wait + g.roy.roundMs; g.turnAt = now + wait;
+}
+function royStart(g) {
+  if (g.status !== 'waiting' || !g.roy) throw new Err('forbidden');
+  for (let x = 0; x < g.np; x++) if (!g.players[x]) g.players[x] = `bot:${3 + rnd(6)}:${x}`;     // les places vides sont prises par des IA de niveaux variés
+  const map = Roy.genMap(g.np, rnd(2147483647));
+  g.n = map.n; g.h = map.h; g.o = new Array(map.n * map.h).fill(-1); g.c = new Array(map.n * map.h).fill(0);
+  const seats = [...Array(g.np).keys()];
+  for (let k = seats.length - 1; k > 0; k--) { const j = rnd(k + 1); [seats[k], seats[j]] = [seats[j], seats[k]]; }
+  map.starts.forEach((cell, k) => { g.o[cell] = seats[k]; g.c[cell] = Roy.START_POINTS; });
+  Object.assign(g.roy, { map: map.alive.join(''), alive: map.alive, eye: map.eye, r0: map.r0, missed: new Array(g.np).fill(0) });
+  g.round = 0; g.elim = []; g.winner = -1; g.result = null; g.last = null; g.turn = -1; g.ai = 0;
+  g.status = 'playing'; g.seq++; g.updated = Date.now();
+  royBegin(g, ROY_INTRO_MS); markG(g); pushGame(g);
+}
+const royHumansAlive = g => aliveSeats(g).filter(x => !isBot(g.players[x]));
+function royBoard(g) { return { n: g.n, h: g.h, alive: g.roy.alive, o: g.o, c: g.c }; }
+function royResolve(g) {
+  if (g.status !== 'playing' || !g.roy) return;
+  const R = g.roy, board = royBoard(g), doomed = new Set(Roy.danger(board, R.eye, R.r0, g.round)), picks = [];
+  for (const seat of aliveSeats(g)) {
+    const pid = g.players[seat];
+    let i = R.picks[seat];
+    const ok = Number.isInteger(i) && i >= 0 && i < g.c.length && g.o[i] === seat && g.c[i] > 0 && R.alive[i];
+    if (isBot(pid)) i = Roy.botPick(board, seat, botLevel(pid), Math.random, doomed);
+    else if (!ok) {                                  // pas de choix : l'IA joue à la place, et après trop d'absences le joueur est éliminé
+      R.missed[seat] = (R.missed[seat] || 0) + 1;
+      if (R.missed[seat] >= ROY_ABSENT) { for (let k = 0; k < g.c.length; k++) if (g.o[k] === seat) { g.o[k] = -1; g.c[k] = 0; } continue; }
+      i = Roy.botPick(board, seat, 3, Math.random, doomed);
+    } else R.missed[seat] = 0;
+    if (i >= 0) picks.push([seat, i]);
+  }
+  const res = Roy.resolve(board, picks, g.round);
+  g.o = res.o; g.c = res.c; g.round++;
+  let shrunk = false;
+  if (res.winner < 0 && Roy.zoneSteps(g.round) > Roy.zoneSteps(g.round - 1)) {
+    shrunk = Roy.shrink(royBoard(g), R.eye, Roy.zoneRadius(R.r0, Roy.zoneSteps(g.round))).length > 0;
+  }
+  g.last = { round: g.round, picks, shrunk, frames: res.frames.length };
+  g.seq++; g.updated = Date.now();
+  royAfter(g, res.frames.length);
+}
+// Après un changement de plateau : éliminations, victoire, manche suivante.
+function royAfter(g, nFrames) {
+  updateElim(g);
+  const alive = aliveSeats(g), humans = royHumansAlive(g);
+  if (alive.length <= 1) { g.winner = alive.length ? alive[0] : -1; finish(g); }
+  else if (!humans.length || g.round >= Roy.ROUND_CAP) {            // plus aucun humain en jeu, ou trop long : les survivants sont classés aux points
+    const val = x => { let v = 0; for (let k = 0; k < g.c.length; k++) if (g.o[k] === x && g.c[k] > 0) v += 3 + g.c[k]; return v; };
+    const order = alive.slice().sort((a, b) => val(b) - val(a));
+    g.winner = order[0];
+    for (let k = order.length - 1; k >= 1; k--) g.elim.push([order[k]]);
+    finish(g);
+  } else royBegin(g, Roy.animMs(nFrames || 1));
+  markG(g); pushGame(g);
+}
+function royPick(c, m) {
+  const g = games.get(String(m.code || '').toUpperCase());
+  if (!g || !g.roy) throw new Err('not_found');
+  if (g.status !== 'playing') throw new Err('not_playing');
+  const seat = g.players.indexOf(c.pid), i = m.i;
+  if (seat < 0 || cellsOf(g, seat) === 0) throw new Err('not_your_turn');
+  if (Date.now() < g.roy.openAt - 250) throw new Err('too_soon');
+  if (!Number.isInteger(i) || i < 0 || i >= g.c.length || g.o[i] !== seat || g.c[i] <= 0 || !g.roy.alive[i]) throw new Err('invalid_move');
+  g.roy.picks[seat] = i;
+  const waiting = royHumansAlive(g).filter(x => g.roy.picks[x] === undefined);
+  if (!waiting.length) royResolve(g);               // tout le monde a choisi : inutile d'attendre la fin du chrono
+  else pushGame(g);
+}
+function royTick(now) {
+  for (const g of [...games.values()]) {
+    if (!g.roy) continue;
+    try {
+      if (g.status === 'waiting' && now >= g.roy.startAt && g.players.some(p => p && !isBot(p))) royStart(g);
+      else if (g.status === 'playing' && g.deadline && now >= g.deadline) royResolve(g);
+    } catch (e) { console.error('royale :', e); }
+  }
+}
+function royView(g, pid) {
+  const R = g.roy, me = g.players.indexOf(pid);
+  return { startAt: R.startAt, roundMs: R.roundMs, openAt: R.openAt, map: R.map, alive: R.alive ? R.alive.join('') : null, eye: R.eye, r0: R.r0,
+    picked: g.status === 'playing' ? g.players.map((p, x) => (isBot(p) || R.picks[x] !== undefined ? 1 : 0)).join('') : '',
+    mine: me >= 0 && R.picks[me] !== undefined ? R.picks[me] : null, next: Roy.zoneNext(g.round), steps: Roy.zoneSteps(g.round), absent: me >= 0 ? (R.missed[me] || 0) : 0 };
+}
+function lobbyOf(c, m, royOk) {                   // la salle d'attente de c, dont c est le créateur
   const g = games.get(String(m.code || '').toUpperCase());
   if (!g) throw new Err('not_found');
-  if (g.status !== 'waiting' || hostOf(g) !== c.pid) throw new Err('forbidden');
+  if (g.status !== 'waiting' || hostOf(g) !== c.pid || (g.roy && !royOk)) throw new Err('forbidden');
   return g;
 }
 
@@ -513,7 +636,7 @@ const OPS = {
       players.set(pid, p); markP(pid);
     }
     c.pid = pid;
-    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, conquest: true, vapid: vapid ? vapid.pub : null, bots: Bot.LEVELS } };
+    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, conquest: true, royale: Roy.SIZES, vapid: vapid ? vapid.pub : null, bots: Bot.LEVELS } };
   },
   name(c, m) {
     const nm = clean(m.name); if (!nm) throw new Err('invalid');
@@ -522,6 +645,7 @@ const OPS = {
     return { profile: prof(p) };
   },
   create(c, m) {
+    if (m.royale) return royCreate(c, m);
     const np = Number(m.np);
     if (![2, 4, 6, 8].includes(np)) throw new Err('invalid');
     const sizes = E.SIZES[np], n = sizes.slice(0, 3).includes(Number(m.n)) ? Number(m.n) : sizes[3];
@@ -570,7 +694,7 @@ const OPS = {
   move(c, m) {
     const g = games.get(String(m.code || '').toUpperCase());
     if (!g) throw new Err('not_found');
-    if (g.status !== 'playing') throw new Err('not_playing');
+    if (g.status !== 'playing' || g.roy) throw new Err('not_playing');
     const seat = g.players.indexOf(c.pid), i = m.i;
     if (seat < 0 || seat !== g.turn) throw new Err('not_your_turn');
     if (!Number.isInteger(i) || i < 0 || i >= g.n * (g.h || g.n) || g.o[i] !== seat || g.c[i] <= 0) throw new Err('invalid_move');
@@ -578,8 +702,9 @@ const OPS = {
     pushGame(g);
     return {};
   },
+  rpick(c, m) { royPick(c, m); return {}; },      // Royale : choisir sa case pour la manche en cours
   start(c, m) {                                   // le créateur de la salle lance la partie
-    startGame(lobbyOf(c, m));
+    { const g = lobbyOf(c, m, true); if (g.roy) royStart(g); else startGame(g); }
     return {};
   },
   cfg(c, m) {                                     // réglages de la salle (créateur)
@@ -669,7 +794,7 @@ const OPS = {
   rematch(c, m) {
     const g = games.get(String(m.code || '').toUpperCase());
     if (!g) throw new Err('not_found');
-    if (g.status !== 'done' || !g.players.includes(c.pid) || g.cq) throw new Err('forbidden');
+    if (g.status !== 'done' || !g.players.includes(c.pid) || g.cq || g.roy) throw new Err('forbidden');
     resetBoard(g, g.np);
     g.seq++; g.updated = Date.now();
     startPlaying(g); markG(g); pushGame(g);
@@ -680,6 +805,7 @@ const OPS = {
     if (!g) throw new Err('not_found');
     const seat = g.players.indexOf(c.pid);
     if (g.status !== 'playing' || seat < 0 || cellsOf(g, seat) === 0) throw new Err('forbidden');
+    if (g.roy) { for (let k = 0; k < g.c.length; k++) if (g.o[k] === seat) { g.o[k] = -1; g.c[k] = 0; } delete g.roy.picks[seat]; g.seq++; royAfter(g, 1); return {}; }
     eliminate(g, seat); pushGame(g);
     return {};
   },
@@ -687,7 +813,7 @@ const OPS = {
     const g = games.get(String(m.code || '').toUpperCase());
     if (!g) throw new Err('not_found');
     const seat = g.players.indexOf(c.pid);
-    if (g.status !== 'playing' || g.mode !== 'live' || seat < 0 || seat === g.turn || isBot(g.players[g.turn])) throw new Err('forbidden');
+    if (g.status !== 'playing' || g.mode !== 'live' || g.roy || seat < 0 || seat === g.turn || isBot(g.players[g.turn])) throw new Err('forbidden');
     if (Date.now() - g.turnAt < KICK_LIVE_MS) throw new Err('too_soon');
     eliminate(g, g.turn); pushGame(g);
     return {};
@@ -727,12 +853,13 @@ const OPS = {
       if (!g.players.some(p => !p || isBot(p))) continue;
       const host = hostOf(g), hw = who(host); if (!hw) continue;
       const here = [...clients].some(cl => cl.pid === host && cl.subs.has(g.code));
+      if (g.roy) { list.push({ code: g.code, host: hw.name, hostElo: hw.elo, filled: g.players.filter(x => x && !isBot(x)).length, np: g.np, n: 0, mode: 'live', hours: 0, teams: 0, ranked: !!g.ranked, sudden: false, updated: g.updated, roy: true, startAt: g.roy.startAt }); continue; }
       if (g.mode === 'long' ? now - g.updated > 2 * DAY : !here) continue;      // en direct : le créateur doit être dans la salle
       list.push({ code: g.code, host: hw.name, hostElo: hw.elo, filled: g.players.filter(Boolean).length, np: g.np, n: g.n,
         mode: g.mode, hours: g.turnMs ? Math.round(g.turnMs / 3600000) : 0, teams: g.teams || 0, ranked: !!g.ranked, sudden: !!g.sudden, updated: g.updated });
     }
     list.sort((x, y) => y.updated - x.updated);
-    return { rooms: list.slice(0, 20) };
+    return { rooms: list.slice(0, 20), now };
   },
   conq(c) {                                       // l'état du monde de conquête
     const now = Date.now(), w = getWorld(now), p = players.get(c.pid), mine = cqOf(p, w);
@@ -821,12 +948,14 @@ function tick() {
 function applyGrace() {   // après un redémarrage (ou un réveil), chacun garde au moins GRACE_MS pour jouer
   const now = Date.now();
   for (const g of games.values()) if (g.status === 'playing' && g.mode === 'long' && g.deadline && g.deadline < now + GRACE_MS) { g.deadline = now + GRACE_MS; markG(g); }
+  for (const g of games.values()) if (g.roy && g.status === 'playing') { royBegin(g, 1500); markG(g); }      // Royale : une manche neuve après un redémarrage
 }
 
 /* ======================= HTTP + WebSocket ======================= */
 const FILES = {
   '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'],
   '/engine.js': ['engine.js', 'text/javascript; charset=utf-8'],
+  '/royale.js': ['royale.js', 'text/javascript; charset=utf-8'],
   '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
   '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'],
   '/icon.svg': ['icon.svg', 'image/svg+xml'],
@@ -917,6 +1046,7 @@ async function main() {
   applyGrace();
   setInterval(() => { for (const c of clients) sendRaw(c, 9, Buffer.alloc(0)); }, 25000).unref();
   setInterval(tick, TEST ? 200 : 30000).unref();
+  setInterval(() => royTick(Date.now()), 300).unref();
   server.listen(PORT, '0.0.0.0', () => log('Propagation : http://localhost:' + PORT));
   const bye = async () => { try { if (dirty.size) await Promise.race([flush(), new Promise(r => setTimeout(r, 4000))]); } finally { process.exit(0); } };
   process.on('SIGTERM', bye); process.on('SIGINT', bye);

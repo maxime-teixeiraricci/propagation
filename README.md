@@ -2,7 +2,7 @@
 
 Jeu de grille de 2 à 8 joueurs. Chacun place des points sur ses cases ; à 4 points, une case déborde sur ses 4 voisines. Le dernier joueur qui a encore des cases gagne. Parties à distance avec un lien ou un code, en direct ou sur plusieurs jours, avec un classement Élo.
 
-Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `bot.js` (les joueurs IA), `index.html` (le jeu), `sw.js` + `manifest.webmanifest` + icônes (notifications et installation sur l'écran d'accueil), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
+Contenu : `server.js` (le serveur, aucune dépendance), `engine.js` (les règles, partagées par le serveur et la page), `royale.js` (le mode Royale : carte, manches simultanées, zone, IA), `bot.js` (les joueurs IA), `index.html` (le jeu), `sw.js` + `manifest.webmanifest` + icônes (notifications et installation sur l'écran d'accueil), `package.json`, `render.yaml` (déploiement Render). Il faut seulement Node 18 ou plus.
 
 ## Ordinateur et téléphone
 
@@ -63,6 +63,17 @@ Un mode à part, depuis la carte « Conquête » de l'accueil. Les règles :
 - **Saison :** du lundi 00 h au lundi suivant (heure de Paris). Le camp qui a le plus de points gagne, puis la carte et les scores repartent de zéro et chacun peut changer de camp. Les saisons passées restent consultables.
 
 Ce mode demande une sauvegarde durable (voir « Garder les parties ») : sans elle, la carte est remise à zéro à chaque redémarrage du serveur. Les réglages (tailles, niveaux d'IA, points de vie, bonus) sont en haut de `conquest.js`.
+
+## Royale (16 à 24 joueurs, tous en même temps)
+
+- **Ouvrir une salle** : sur l'accueil, la carte « Royale » propose 16, 20 ou 24 joueurs, classée ou non, publique ou non. La salle reste ouverte 2 minutes (ou jusqu'à ce que le créateur clique sur « Lancer maintenant », ou que toutes les places soient prises par des humains). Au départ, les places vides sont remplies par des IA de niveaux variés. Les salles publiques apparaissent dans « Salles ouvertes ».
+- **Une île différente à chaque partie** : la carte est générée au hasard (contour irrégulier, lacs, golfes), d'un seul tenant, avec environ 16 cases par joueur. Les départs sont répartis loin les uns des autres, puis ajustés pour que chacun ait à peu près la même part de carte. Chacun commence avec une case de 3 points.
+- **Manches simultanées** : toutes les 10 secondes, chacun touche une de ses cases pour y poser un point (il peut changer d'avis jusqu'à la fin du chrono). Quand tous les humains ont choisi, la manche se résout tout de suite. Ensuite tous les débordements se propagent ensemble, vague après vague. Quand plusieurs joueurs envoient des points sur la même case dans la même vague, le plus gros apport gagne la case (à égalité, le propriétaire actuel la garde, sinon un tirage fixe). Les choix des autres restent secrets jusqu'à la résolution.
+- **Zone qui rétrécit** : un œil (cible dorée) marque le centre. À la fin de la 6e manche, puis toutes les 2 manches, les cases trop éloignées disparaissent (les points qui s'y trouvent sont perdus). Elles sont annoncées 2 manches avant par des cases rouges et un cercle pointillé. Dernier joueur en vie : vainqueur. Au bout de 70 manches, les survivants sont classés aux points.
+- **Absents et abandons** : un humain qui ne choisit rien est remplacé par une IA pour la manche ; après 3 manches de suite sans choix, il est éliminé. « Abandonner » élimine tout de suite. Quand il ne reste plus aucun humain en vie, la partie se termine aux points.
+- **Élo** : seulement entre joueurs réels (au moins deux humains), selon l'ordre d'élimination ; les IA de remplissage n'ont pas d'Élo comparable. Une partie avec un seul humain ne change pas l'Élo.
+- **Affichage** : la carte est dessinée sur une seule image (boutons − / + pour zoomer, « Mes cases » pour se recentrer). 24 joueurs, 24 combinaisons couleur + forme de point. Toucher une case d'un autre joueur indique à qui elle est.
+- **Réglages** (en haut de `royale.js`) : points de départ, début et rythme de la zone, plafond de manches, durée de manche.
 
 ## Notifications « c'est ton tour »
 
