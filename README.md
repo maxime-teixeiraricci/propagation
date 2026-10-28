@@ -79,12 +79,12 @@ Ce mode demande aussi une sauvegarde durable. Les réglages sont en haut de la p
 
 ## Joueurs [BOT] (des résidents qui vivent sur le serveur)
 
-Au démarrage, le serveur crée 42 comptes permanents, nommés « [BOT] Prénom ». Chacun a un profil (nom, Élo, parties et victoires déjà jouées, niveau d'IA, heures de réveil et de coucher) et apparaît au classement avec une pastille BOT. Personne ne peut se donner un nom en « [BOT] ».
+Quand `RESIDENTS` est défini, le serveur crée au démarrage autant de comptes permanents, nommés « [BOT] Prénom ». Chacun a un profil (nom, Élo, parties et victoires déjà jouées, niveau d'IA, heures de réveil et de coucher) et apparaît au classement avec une pastille BOT. Personne ne peut se donner un nom en « [BOT] ».
 
 - **Comme un joueur :** ils créent des salles publiques (surtout à 2 joueurs, en direct ou en longue durée), rejoignent les salles des autres après quelques dizaines de secondes, s'inscrivent aux tournois publics (au plus la moitié des places) et choisissent un camp en Conquête, puis attaquent à leur rythme (ils gardent de la réserve). Trois parties en cours au maximum chacun.
 - **Rythme :** en partie rapide, 3 à 15 secondes de réflexion par coup (parfois plus). En longue durée, de quelques minutes à quelques heures, jamais pendant leur nuit, et toujours avant la fin du délai. Un [BOT] élimine un adversaire parti en pleine partie rapide, comme le permet le jeu.
 - **Élo :** ils jouent au niveau de leur IA, donc leur Élo se stabilise autour de leur vrai niveau. Leurs parties contre des humains sont classées et font bouger les deux Élo ; une partie qui ne compte que des IA et des [BOT] n'est jamais classée.
-- **Réglage :** la variable `RESIDENTS` donne leur nombre (0 pour n'en avoir aucun, 60 au plus). Sans elle : 42.
+- **Réglage :** la variable `RESIDENTS` donne leur nombre (0 pour n'en avoir aucun, 60 au plus). Sans elle : 0 (fonction désactivée).
 
 ## Notifications « c'est ton tour »
 
@@ -132,3 +132,7 @@ Le serveur sauvegarde chaque coup, et recharge tout au démarrage. Les parties t
 - Le service gratuit de Render s'endort : une notification n'est envoyée que lorsque le serveur est réveillé (voir UptimeRobot ci-dessus pour qu'il ne dorme pas).
 - Quiconque connaît le code d'une partie peut la rejoindre (si une place est libre) ou la regarder.
 - Rien n'empêche quelqu'un de créer plusieurs comptes pour s'échanger de l'Élo : les parties amicales (case « Partie classée » décochée) ne comptent pas.
+
+## Remise à zéro du 28 octobre 2026
+
+Au premier démarrage qui suit cette mise en ligne, le serveur retire les [BOT] existants (et leurs parties), réinitialise la Conquête (carte, scores, saisons passées, camps de chacun) et efface tous les tournois (et les trophées). Il ne le fait qu'une fois : un drapeau est gardé dans la base. Les joueurs, leur Élo et leurs autres parties ne bougent pas.

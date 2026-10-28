@@ -635,7 +635,7 @@ function tourSummary(t, pid) {
 // des heures de réveil et de coucher, des salles qu'ils rejoignent ou créent, des tournois, un camp en Conquête.
 // Ils jouent au niveau de leur IA (donc leur Élo se stabilise à leur vrai niveau), avec des délais de réflexion humains.
 // Ils n'ont aucun accès au réseau : le serveur agit pour eux en appelant les mêmes opérations que les joueurs.
-const RES_COUNT = process.env.RESIDENTS !== undefined ? Math.max(0, Math.min(60, Math.floor(Number(process.env.RESIDENTS)) || 0)) : (TEST ? 0 : 42);
+const RES_COUNT = process.env.RESIDENTS !== undefined ? Math.max(0, Math.min(60, Math.floor(Number(process.env.RESIDENTS)) || 0)) : 0;                    // par défaut : aucun [BOT] (à activer avec RESIDENTS)
 const RES_FAST = TEST && process.env.RES_FAST === '1';          // essais : horloge accélérée, pas de nuit
 const RES_TAG = '[BOT] ';
 const RES_NAMES = ['Léa', 'Hugo', 'Inès', 'Théo', 'Zoé', 'Nolan', 'Sacha', 'Maëlys', 'Yanis', 'Lucie', 'Mehdi', 'Jade', 'Anaïs', 'Tom', 'Clara', 'Elias', 'Manon', 'Kylian', 'Nina', 'Ravi', 'Éva', 'Axel', 'Lola', 'Noé',
@@ -1212,9 +1212,29 @@ function parse(c) {
   }
 }
 
+/* ======================= remise à zéro ponctuelle ======================= */
+// Exécutée une seule fois (le drapeau est gardé dans la base) au premier démarrage qui suit la mise en ligne :
+// retire les joueurs [BOT] et leurs parties, réinitialise la Conquête (carte, scores, saisons passées, camps) et efface les tournois.
+const RESET_ID = 'reset-2026-10-28';
+function runResets() {
+  if (!loadOk || meta.get(RESET_ID) || (TEST && process.env.SKIP_RESET === '1')) return;
+  let nb = 0, nt = 0, ng = 0;
+  const resIds = new Set([...players.values()].filter(p => p.res).map(p => p.pid));
+  for (const g of [...games.values()]) if (g.tour || g.cq || g.players.some(x => resIds.has(x))) { dropGame(g.code); ng++; }
+  for (const pid of resIds) { players.delete(pid); markP(pid); nb++; }
+  for (const t of allTours()) { meta.delete('t:' + t.code); saveT(t); nt++; }
+  for (const p of players.values()) {
+    if (p.cq || p.trophies) { delete p.cq; delete p.trophies; markP(p.pid); }
+  }
+  meta.delete('conquest'); markM('conquest'); world = null; cqCache = { t: 0 };
+  meta.set(RESET_ID, { at: Date.now() }); markM(RESET_ID);
+  log(`remise à zéro : ${nb} [BOT] retirés, ${nt} tournois effacés, ${ng} parties supprimées, Conquête réinitialisée`);
+}
+
 /* ======================= démarrage ======================= */
 async function main() {
   await loadAll();
+  runResets();
   ensureResidents();
   ensureVapid();
   applyGrace();
