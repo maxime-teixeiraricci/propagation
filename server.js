@@ -709,18 +709,19 @@ const OPS = {
   conq(c) {                                       // l'état du monde de conquête
     const now = Date.now(), w = getWorld(now), p = players.get(c.pid), mine = cqOf(p, w);
     if (now - cqCache.t > 15000 || cqCache.id !== w.id) { const r = cqPlayers(w.id); cqCache = { t: now, id: w.id, members: r.members, top: r.list.slice(0, 10).map(x => ({ pid: x.pid, name: x.name, team: x.team, hits: x.hits, caps: x.caps })) }; }
+    if (mine && typeof mine.atk !== 'number') { Conq.syncAttacks(mine, now); markP(p.pid); }
     const snap = Conq.snapshot(w, mine ? mine.team : null, now);
     for (const z of snap.zones) { const l = Bot.byLevel(z.lvl); z.ai = { name: l.name, elo: l.elo }; }
     let busy = null;
     for (const g of games.values()) if (g.cq && g.cq.pid === c.pid && g.status === 'playing' && g.cq.season === w.id) { busy = { code: g.code, zone: g.cq.zone }; break; }
     return Object.assign(snap, { now, members: cqCache.members, top: cqCache.top.map(x => ({ name: x.name, team: x.team, hits: x.hits, caps: x.caps, me: x.pid === c.pid })),
-      me: mine ? { team: mine.team, hits: mine.hits || 0, caps: mine.caps || 0 } : null, busy, bonusHours: Conq.CAPTURE_BONUS_H });
+      me: mine ? { team: mine.team, hits: mine.hits || 0, caps: mine.caps || 0, attacks: Conq.attacksView(mine, now) } : null, busy, payMin: Conq.PAY_MS / 60000, atkEveryH: Conq.ATK_EVERY / 3600000 });
   },
   conqteam(c, m) {                                // choisir son camp pour la saison (définitif jusqu'au lundi)
-    const w = getWorld(), p = players.get(c.pid), team = String(m.team || '');
+    const now0 = Date.now(), w = getWorld(now0), p = players.get(c.pid), team = String(m.team || '');
     if (!Conq.TEAMS.includes(team)) throw new Err('invalid');
     if (cqOf(p, w)) throw new Err('locked');
-    p.cq = { s: w.id, team, hits: 0, caps: 0 }; markP(p.pid); cqCache = { t: 0 };
+    p.cq = { s: w.id, team, hits: 0, caps: 0, atk: TEST && Number(process.env.CQ_ATK_START) ? Math.min(Conq.ATK_MAX, Number(process.env.CQ_ATK_START)) : Conq.ATK_START, t: now0 }; markP(p.pid); cqCache = { t: 0 };
     return {};
   },
   conqatk(c, m) {                                 // attaquer une zone : un combat contre l'IA qui la défend
@@ -739,6 +740,8 @@ const OPS = {
     let code = '';
     for (let t = 0; t < 50; t++) { let s2 = ''; for (let i = 0; i < 4; i++) s2 += ALPHABET[rnd(ALPHABET.length)]; if (!games.has(s2)) { code = s2; break; } }
     if (!code) throw new Err('full');
+    if (!Conq.spendAttack(me, now)) throw new Err('no_attack');          // lancer un combat coûte une attaque (réserve : 3 au départ, 5 au maximum, +1 toutes les 3 h)
+    markP(p.pid);
     const z = Conq.zoneOf(w, Z.id), b = E.newBoard(Z.a, 2, rnd(2), Z.b);
     const g = { code, n: Z.a, h: Z.b, np: 2, mode: 'live', turnMs: 0, ranked: false, status: 'waiting', players: [c.pid, `bot:${Z.lvl}:1`],
       o: b.o, c: b.c, turn: rnd(2), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0,

@@ -1,14 +1,18 @@
 /* Conquête : un monde commun où quatre camps (eau, feu, air, terre) se disputent des zones.
    Ce module ne contient que les règles (aucun accès au réseau ni au disque) : le serveur lui confie l'état du monde.
-   - Chaque zone est une grille a × b où se joue le combat. Elle rapporte (a + b) + (a × b) points par heure à son camp.
+   - Chaque zone est une grille a × b où se joue le combat. Elle rapporte (a + b) + (a × b) points à son camp toutes les 20 minutes.
    - Une zone a des points de vie (PV). Chaque victoire d'un attaquant contre sa défense en retire un ;
      à zéro, la zone change de camp, repart avec tous ses PV, et le camp vainqueur gagne un bonus de capture.
    - Une saison dure une semaine (du lundi 00 h au lundi suivant, heure de Paris), puis la carte repart de zéro.
-   Les points horaires sont calculés à la demande d'après l'heure écoulée : aucun minuteur n'est nécessaire. */
+   - Chaque joueur dispose d'attaques : 3 au départ, 5 au maximum, une de plus toutes les 3 heures. Lancer un combat en coûte une.
+   Les points et les attaques sont calculés à la demande d'après l'heure écoulée : aucun minuteur n'est nécessaire. */
 'use strict';
 
 const HOUR = 3600 * 1000, DAY = 24 * HOUR, WEEK = 7 * DAY;
-const CAPTURE_BONUS_H = 6;            // bonus de capture : 6 heures de production de la zone
+const PAY_MS = 20 * 60 * 1000;                    // les zones rapportent leurs points toutes les 20 minutes
+const CAPTURE_BONUS_H = 6;                        // bonus de capture : 6 heures de production de la zone...
+const CAPTURE_BONUS_TICKS = CAPTURE_BONUS_H * HOUR / PAY_MS;       // ...soit 18 versements
+const ATK_START = 3, ATK_MAX = 5, ATK_EVERY = 3 * HOUR;            // attaques d'un joueur : départ, plafond, une de plus toutes les 3 h
 const MAX_EVENTS = 40, MAX_HISTORY = 12;
 
 // Ordre d'affichage des camps. Les camps de départ se placent dans les coins : eau en haut à gauche, puis feu, terre et air dans le sens des aiguilles d'une montre.
@@ -48,7 +52,7 @@ HOME_ORDER.forEach((team, k) => {
   }
 });
 ZONES.push({ id: 'nexus', name: 'Le Nexus', kind: 'C', home: null, x: 4, y: 4, w: 2, h: 2, a: 10, b: 10, lvl: 8, pv: 5, pv0: 3 });
-ZONES.forEach(Z => { Z.income = yieldOf(Z); Z.bonus = CAPTURE_BONUS_H * Z.income; });
+ZONES.forEach(Z => { Z.income = yieldOf(Z); Z.bonus = CAPTURE_BONUS_TICKS * Z.income; });
 const ZONE = Object.fromEntries(ZONES.map(Z => [Z.id, Z]));
 
 // Deux zones sont voisines si elles se touchent par un bord (pas seulement par un coin).
@@ -83,13 +87,13 @@ function newWorld(now, history) {
 }
 const zoneOf = (w, id) => w.zones.find(z => z.id === id);
 
-// Verse les points des heures écoulées. Les heures se comptent depuis la prise de la zone.
+// Verse les points des périodes de 20 minutes écoulées. Elles se comptent depuis la prise de la zone.
 function settle(w, now) {
   now = Math.min(now, w.end);
   for (const z of w.zones) {
     if (!z.owner) continue;
-    const n = Math.floor((now - z.paid) / HOUR);
-    if (n > 0) { w.scores[z.owner] += n * ZONE[z.id].income; z.paid += n * HOUR; }
+    const n = Math.floor((now - z.paid) / PAY_MS);
+    if (n > 0) { w.scores[z.owner] += n * ZONE[z.id].income; z.paid += n * PAY_MS; }
   }
 }
 
@@ -139,6 +143,29 @@ function hit(w, zoneId, team, now, by) {
   return { kind: 'capture', hp: Z.pv, maxHp: Z.pv, prev, bonus: Z.bonus };
 }
 
+/* ---------- attaques d'un joueur ----------
+   rec : { atk: attaques en réserve, t: début de la recharge de la prochaine }. Une fiche sans réserve (ancienne) repart de ATK_START. */
+function syncAttacks(rec, now) {
+  if (typeof rec.atk !== 'number') { rec.atk = ATK_START; rec.t = now; }
+  if (rec.atk >= ATK_MAX) { rec.atk = ATK_MAX; rec.t = now; return rec; }
+  const k = Math.floor((now - rec.t) / ATK_EVERY);
+  if (k > 0) { rec.atk = Math.min(ATK_MAX, rec.atk + k); rec.t = rec.atk >= ATK_MAX ? now : rec.t + k * ATK_EVERY; }
+  return rec;
+}
+// Lance un combat : retire une attaque. Renvoie false s'il n'y en a plus.
+function spendAttack(rec, now) {
+  syncAttacks(rec, now);
+  if (rec.atk < 1) return false;
+  if (rec.atk >= ATK_MAX) rec.t = now;
+  rec.atk -= 1;
+  return true;
+}
+// Ce que voit le joueur : réserve, plafond, et l'heure de la prochaine attaque (null si la réserve est pleine).
+function attacksView(rec, now) {
+  const c = syncAttacks(Object.assign({}, rec), now);
+  return { n: c.atk, max: ATK_MAX, next: c.atk >= ATK_MAX ? null : c.t + ATK_EVERY };
+}
+
 // Vue pour le client : la carte, les scores et ce que `team` peut attaquer.
 function snapshot(w, team, now) {
   return {
@@ -156,4 +183,4 @@ function snapshot(w, team, now) {
   };
 }
 
-module.exports = { HOUR, DAY, WEEK, CAPTURE_BONUS_H, TEAMS, TEAM_NAMES, ZONES, ZONE, NEIGHBORS, yieldOf, area, seasonBounds, parisOffset, newWorld, zoneOf, settle, rollover, rate, owned, whyNot, hit, snapshot };
+module.exports = { HOUR, DAY, WEEK, PAY_MS, ATK_START, ATK_MAX, ATK_EVERY, CAPTURE_BONUS_H, CAPTURE_BONUS_TICKS, syncAttacks, spendAttack, attacksView, TEAMS, TEAM_NAMES, ZONES, ZONE, NEIGHBORS, yieldOf, area, seasonBounds, parisOffset, newWorld, zoneOf, settle, rollover, rate, owned, whyNot, hit, snapshot };

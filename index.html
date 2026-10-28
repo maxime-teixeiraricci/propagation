@@ -655,6 +655,14 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
   #ccard{grid-area:conq}
   .cqc{grid-template-columns:150px minmax(0,1fr)} .mm{width:150px; height:150px}
 }
+
+.cq-atks{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 18px}
+.cq-atks .lab{font:800 17px var(--display)}
+.cq-atks .pips{display:flex; gap:6px}
+.cq-atks .pips i{width:20px; height:20px; border-radius:50%; border:3px solid var(--accent); background:#fff}
+.cq-atks .pips i.on{background:radial-gradient(circle at 35% 28%,#fff 0 9%,#7FB0FF 10%,var(--accent) 60%,#1B47A8)}
+.cq-atks .nx{margin-left:auto; font:700 14px var(--body); color:var(--muted)}
+.cq-atks.empty .lab{color:var(--danger)}
 </style>
 </head>
 <body>
@@ -858,6 +866,11 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
       <p id="cq-busy-t"></p>
       <button class="btn small" id="cq-resume" type="button">Reprendre</button>
     </div>
+    <div class="card cq-atks" id="cq-atks" hidden>
+      <span class="lab">Tes attaques</span>
+      <span class="pips" id="cq-pips" aria-hidden="true"></span>
+      <span class="nx" id="cq-next"></span>
+    </div>
     <div class="cq-teams" id="cq-teams"></div>
     <div class="card stack" id="cq-pick" hidden>
       <h2 id="cq-pick-t"></h2>
@@ -890,8 +903,9 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
       <ol class="steps">
         <li><b>Choisis ton camp</b> pour la semaine : eau, feu, air ou terre. Tu ne peux pas en changer avant lundi.</li>
         <li><b>Attaque une zone</b> qui touche une zone de ton camp. Tu joues une partie contre l’IA qui la défend : plus la zone est grande, plus l’IA est forte.</li>
-        <li><b>Chaque victoire retire 1 point de vie</b> à la zone. À zéro, elle passe à ton camp avec tous ses points de vie, et ton camp touche un bonus de capture (6 heures de production). Perdre un combat ne coûte rien.</li>
-        <li><b>Chaque heure</b>, une zone rapporte à son camp (a + b) + (a × b) points, où a × b est la taille de sa grille.</li>
+        <li><b>Chaque victoire retire 1 point de vie</b> à la zone. À zéro, elle passe à ton camp avec tous ses points de vie, et ton camp touche un bonus de capture (6 heures de production).</li>
+        <li><b>Chaque combat coûte 1 attaque.</b> Tu en as 3 au départ, 5 au maximum, et une nouvelle arrive toutes les 3 heures. Gagner ou perdre, l’attaque est dépensée : choisis bien tes combats.</li>
+        <li><b>Toutes les 20 minutes</b>, une zone rapporte à son camp (a + b) + (a × b) points, où a × b est la taille de sa grille.</li>
         <li><b>Lundi à minuit</b>, la saison se termine : le camp qui a le plus de points gagne, et la carte repart de zéro.</li>
       </ol>
     </details>
@@ -1006,7 +1020,7 @@ const boardEl=$('#board');
 
 let toastT;
 function toast(msg){ $('#toast').textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').textContent=''; },6000); }
-const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.',not_full:'En équipes, toutes les places doivent être prises : complète avec des IA.',too_many_players:'Retire d’abord des joueurs pour réduire le nombre de places.',no_team:'Choisis d’abord ton camp.',busy:'Tu as déjà un combat en cours : termine-le avant d’en lancer un autre.',own:'Cette zone est déjà à ton camp.',far:'Trop loin : une zone doit toucher une zone de ton camp pour être attaquée.',locked:'Tu as déjà choisi ton camp pour cette saison.'};
+const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.',not_full:'En équipes, toutes les places doivent être prises : complète avec des IA.',too_many_players:'Retire d’abord des joueurs pour réduire le nombre de places.',no_team:'Choisis d’abord ton camp.',busy:'Tu as déjà un combat en cours : termine-le avant d’en lancer un autre.',own:'Cette zone est déjà à ton camp.',far:'Trop loin : une zone doit toucher une zone de ton camp pour être attaquée.',locked:'Tu as déjà choisi ton camp pour cette saison.',no_attack:'Tu n’as plus d’attaque en réserve : une nouvelle arrive toutes les 3 heures.'};
 const errMsg=e=>ERRS[e&&e.code]||'Connexion impossible, réessaie dans un instant.';
 const show=screen=>{ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; $('#conquest').hidden=screen!=='conquest'; updateTitle(); };
 const setHash=v=>{ try{ if(v) location.hash=v; else if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
@@ -1865,7 +1879,7 @@ function renderCqCard(){
   const chips=$('#cqc-chips'); chips.textContent='';
   for(const t of TEAMS){ const c=document.createElement('span'); c.className='chip'+(cq.me&&cq.me.team===t?' mine':''); c.style.setProperty('--tc',TEAM_COL[t]); c.innerHTML=tdisc(t,22)+`<span>${fmtPts(cq.scores[t])}</span>`; c.title=TEAM_LABEL[t]; chips.append(c); }
   const left=fmtLeft(cq.season.end-cqNow());
-  $('#cqc-sub').textContent=(cq.me?`Tu es du camp ${TEAM_LABEL[cq.me.team]}.`:'Choisis ton camp : eau, feu, air ou terre.')+` La saison se termine dans ${left}.`+(cq.busy?' Un combat t’attend.':'');
+  $('#cqc-sub').textContent=(cq.me?`Tu es du camp ${TEAM_LABEL[cq.me.team]} · ${plural(cq.me.attacks.n,'attaque')} en réserve.`:'Choisis ton camp : eau, feu, air ou terre.')+` La saison se termine dans ${left}.`+(cq.busy?' Un combat t’attend.':'');
   $('#cq-go').textContent=cq.busy?'Reprendre la bataille':cq.me?'Aller sur la carte':'Rejoindre la bataille';
 }
 /* l'écran de conquête */
@@ -1887,7 +1901,14 @@ function renderConquest(){
   const busy=$('#cq-busy');
   busy.hidden=!cq.busy;
   if(cq.busy){ const z=zoneById(cq.busy.zone); $('#cq-busy-t').textContent=`Combat en cours : ${z?z.name:'une zone'}`; }
-  renderTeams(); renderPick(); renderMap(); renderPanel(); renderLog(); renderTopCq(); renderHist();
+  renderAtks(); renderTeams(); renderPick(); renderMap(); renderPanel(); renderLog(); renderTopCq(); renderHist();
+}
+function renderAtks(){
+  const box=$('#cq-atks'), a=cq.me&&cq.me.attacks; box.hidden=!a; if(!a) return;
+  $('#cq-pips').innerHTML=Array.from({length:a.max},(_,i)=>`<i class="${i<a.n?'on':''}"></i>`).join('');
+  $('#cq-atks .lab').textContent=`Tes attaques : ${a.n} sur ${a.max}`;
+  $('#cq-next').textContent=a.next?`Prochaine dans ${fmtLeft(a.next-cqNow())}`:'Réserve pleine';
+  box.classList.toggle('empty',a.n<1);
 }
 function renderTeams(){
   const box=$('#cq-teams'); box.textContent='';
@@ -1901,7 +1922,7 @@ function renderTeams(){
     el.innerHTML=`${tdisc(t,32)}<span class="tn"></span><b class="ts"></b><span class="tl"></span>`;
     el.querySelector('.tn').innerHTML=`${TEAM_LABEL[t]}${mine?'<small>ton camp</small>':''}`;
     el.querySelector('.ts').textContent=fmtPts(cq.scores[t]);
-    el.querySelector('.tl').textContent=`${plural(cq.counts[t],'zone')} · +${fmtPts(cq.rate[t])} pts/h · ${plural(cq.members[t],'joueur')}`;
+    el.querySelector('.tl').textContent=`${plural(cq.counts[t],'zone')} · +${fmtPts(cq.rate[t])} pts/20 min · ${plural(cq.members[t],'joueur')}`;
     if(pick) el.addEventListener('click',()=>{ cqPick=cqPick===t?null:t; renderTeams(); renderPick(); });
     box.append(el);
   }
@@ -1934,7 +1955,7 @@ function renderMap(){
     const total=z.owner?z.maxHp:z.hp;
     b.innerHTML=`${z.owner?`<span class="zw">${teamIcon(z.owner,40)}</span>`:''}<span class="zn"></span><span class="zy">+${z.income}</span><span class="zp">${Array.from({length:total},(_,i)=>`<i class="${i<z.hp?'on':''}"></i>`).join('')}</span>`;
     b.querySelector('.zn').textContent=z.name;
-    b.setAttribute('aria-label',`${z.name}, grille ${z.a} sur ${z.b}, ${z.owner?'camp '+TEAM_LABEL[z.owner]:'zone libre'}, ${z.hp} point${z.hp>1?'s':''} de vie, rapporte ${z.income} points par heure${atk?', attaquable':''}`);
+    b.setAttribute('aria-label',`${z.name}, grille ${z.a} sur ${z.b}, ${z.owner?'camp '+TEAM_LABEL[z.owner]:'zone libre'}, ${z.hp} point${z.hp>1?'s':''} de vie, rapporte ${z.income} points toutes les 20 minutes${atk?', attaquable':''}`);
     b.addEventListener('click',()=>{ cqSel=z.id; renderMap(); renderPanel(); if(matchMedia('(max-width:959px)').matches) $('#cq-zone').scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'nearest'}); });
     box.append(b);
   }
@@ -1952,7 +1973,7 @@ function renderPanel(){
   box.innerHTML=`<h3></h3><p class="zown"></p>
     <dl class="zgrid">
       <div><dt>Grille du combat</dt><dd>${z.a} × ${z.b}</dd></div>
-      <div><dt>Production</dt><dd>+${fmtPts(z.income)} pts/h</dd></div>
+      <div><dt>Production</dt><dd>+${fmtPts(z.income)} pts/20 min</dd></div>
       <div><dt>Points de vie</dt><dd>${hearts(z.hp,total)}</dd></div>
       <div><dt>Bonus de capture</dt><dd>+${fmtPts(z.bonus)} pts</dd></div>
       <div class="wide"><dt>${z.owner?'Défense de la zone':'Garnison de la zone'}</dt><dd class="zai"></dd></div>
@@ -1966,7 +1987,9 @@ function renderPanel(){
   const busyOther=cq.busy&&cq.busy.zone!==z.id, resume=cq.busy&&cq.busy.zone===z.id;
   let reason=z.why?WHY[z.why]||'':'';
   if(!reason&&busyOther) reason='Tu as déjà un combat en cours : termine-le avant d’en lancer un autre.';
-  why.textContent=reason||(z.owner?`Chaque victoire retire 1 point de vie. À 0, la zone passe à ton camp.`:'Une seule victoire suffit pour la prendre.');
+  const at=cq.me&&cq.me.attacks;
+  if(!reason&&!resume&&at&&at.n<1) reason=`Plus d’attaque en réserve : la prochaine arrive dans ${fmtLeft(at.next-cqNow())}.`;
+  why.textContent=reason||(z.owner?`Chaque victoire retire 1 point de vie. À 0, la zone passe à ton camp.`:'Une seule victoire suffit pour la prendre.')+(resume||!at?'':` Le combat coûte 1 attaque (il t’en reste ${at.n}).`);
   btn.disabled=!!reason;
   btn.textContent=resume?'Reprendre le combat':reason?'Attaque impossible':`Attaquer`;
   btn.addEventListener('click',()=>cqAttack(z.id,btn));
@@ -2015,7 +2038,7 @@ $('#cq-go').addEventListener('click',()=>{ if(cq&&cq.busy){ enterGame(cq.busy.co
 $('#cq-back').addEventListener('click',closeConquest);
 $('#cq-resume').addEventListener('click',()=>{ if(cq&&cq.busy) enterGame(cq.busy.code); });
 setInterval(()=>{ if(mode==='conquest'&&!document.hidden) loadConquest(); },20000);
-setInterval(()=>{ if(cq&&mode==='conquest') $('#cq-season').textContent=`Semaine du ${dayFmt(cq.season.start)} au ${dayFmt(cq.season.end-1)} · il reste ${fmtLeft(cq.season.end-cqNow())}`; },30000);
+setInterval(()=>{ if(cq&&mode==='conquest'){ renderAtks(); $('#cq-season').textContent=`Semaine du ${dayFmt(cq.season.start)} au ${dayFmt(cq.season.end-1)} · il reste ${fmtLeft(cq.season.end-cqNow())}`; } },30000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&mode==='conquest') loadConquest(); });
 
 /* combat de conquête : couleurs des camps, bandeau, résultat */
@@ -2037,7 +2060,7 @@ function cqResultLine(){
   const c=remote&&remote.cq, r=c&&c.result; if(!r) return '';
   if(r.kind==='capture') return `Zone prise ! ${c.name} passe au camp ${TEAM_LABEL[c.team]}. +${fmtPts(r.bonus)} points pour ton camp.`;
   if(r.kind==='hit') return `Victoire : ${c.name} perd 1 point de vie (${r.hp} sur ${r.maxHp}). Encore ${r.hp} victoire${r.hp>1?'s':''} pour la prendre.`;
-  if(r.kind==='lost') return `Défaite : la défense de ${c.name} a tenu bon. Ça ne coûte rien, retente ta chance.`;
+  if(r.kind==='lost') return `Défaite : la défense de ${c.name} a tenu bon. L’attaque est dépensée ; une nouvelle arrive toutes les 3 heures.`;
   if(r.kind==='own') return `Victoire, mais ton camp tient déjà ${c.name} : rien ne change.`;
   if(r.kind==='late') return 'La saison s’est terminée pendant le combat : il ne compte pas.';
   return '';

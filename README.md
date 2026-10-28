@@ -57,8 +57,9 @@ Un mode à part, depuis la carte « Conquête » de l'accueil. Les règles :
 - **Quatre camps :** eau, feu, air, terre. Chaque joueur en choisit un pour la semaine (il ne peut pas en changer avant lundi).
 - **Une carte de 17 zones** de tailles différentes. Les quatre camps ont exactement la même carte (elle est symétrique) et démarrent chacun avec une zone.
 - **Attaquer :** on attaque une zone qui touche une zone de son camp. Le combat est une partie contre l'IA qui défend la zone, sur une grille de la taille de la zone (a × b). Plus la zone est grande, plus l'IA est forte.
-- **Points de vie :** chaque victoire retire 1 point de vie à la zone. À zéro, elle passe au camp du vainqueur, avec tous ses points de vie, et ce camp reçoit un bonus de capture (6 heures de production de la zone). Perdre un combat ne coûte rien.
-- **Production :** chaque heure, une zone de a × b rapporte (a + b) + (a × b) points à son camp (35 points pour 5 × 5, 120 pour le Nexus en 10 × 10).
+- **Points de vie :** chaque victoire retire 1 point de vie à la zone. À zéro, elle passe au camp du vainqueur, avec tous ses points de vie, et ce camp reçoit un bonus de capture (6 heures de production de la zone). 
+- **Attaques :** chaque joueur en a 3 au départ, 5 au maximum, et une de plus toutes les 3 heures. Lancer un combat en coûte une, qu'on gagne ou qu'on perde (reprendre un combat en cours ne coûte rien).
+- **Production :** toutes les 20 minutes, une zone de a × b rapporte (a + b) + (a × b) points à son camp (35 points pour 5 × 5, 120 pour le Nexus en 10 × 10).
 - **Saison :** du lundi 00 h au lundi suivant (heure de Paris). Le camp qui a le plus de points gagne, puis la carte et les scores repartent de zéro et chacun peut changer de camp. Les saisons passées restent consultables.
 
 Ce mode demande une sauvegarde durable (voir « Garder les parties ») : sans elle, la carte est remise à zéro à chaque redémarrage du serveur. Les réglages (tailles, niveaux d'IA, points de vie, bonus) sont en haut de `conquest.js`.
