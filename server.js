@@ -411,6 +411,10 @@ function notifyTurn(g) {
   if (g.status !== 'playing' || g.notifiedAt === g.turnAt) return;
   g.notifiedAt = g.turnAt;
   const pid = g.players[g.turn];
+  if (pid && !isBot(pid)) {                    // page ouverte ailleurs (accueil, autre partie) : un petit bandeau « à toi de jouer »
+    const label = g.cq ? 'Conquête · ' + Conq.ZONE[g.cq.zone].name : 'Partie ' + g.code;
+    for (const c of clients) if (c.pid === pid && !c.subs.has(g.code)) send(c, { t: 'turn', code: g.code, label });
+  }
   if (pid && !isBot(pid) && !playerHere(pid, g.code)) notifyPid(pid, g.mode === 'long' ? 86400 : 600).catch(() => {});
 }
 function remindTurns(now) {        // partie longue : rappel quand il reste peu de temps (3 h, ou 1/4 du délai si plus court)

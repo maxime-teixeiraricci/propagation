@@ -66,6 +66,8 @@ Ce mode demande une sauvegarde durable (voir « Garder les parties ») : sans el
 
 ## Notifications « c'est ton tour »
 
+Quand c'est à toi de jouer dans une partie que tu n'affiches pas (accueil, carte de conquête, autre partie), un bandeau jaune apparaît en haut de la page : un clic ouvre la partie.
+
 - Dans « Mon compte », le bouton « Activer les notifications » prévient cet appareil quand c'est son tour, même page fermée. Il faut l'activer sur chaque appareil (ordinateur, téléphone).
 - En partie longue, un rappel est envoyé quand il reste peu de temps : 3 heures, ou un quart du délai s'il est plus court.
 - Pas de notification si tu regardes déjà la partie, page visible.
