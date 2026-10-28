@@ -778,6 +778,7 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
           </label>
         </div>
         <label class="check" for="ranked"><input type="checkbox" id="ranked" checked> Partie classée (compte pour l’Élo)</label>
+        <label class="check" for="auto" id="autobox"><input type="checkbox" id="auto" checked> Lancer la partie dès que toutes les places sont prises</label>
         <label class="check" for="public" id="publicbox"><input type="checkbox" id="public" checked> Salle publique : visible dans la liste des salles ouvertes</label>
         <label class="check" for="sudden" id="suddenbox" hidden><input type="checkbox" id="sudden"> Mort subite : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours</label>
       </details>
@@ -845,6 +846,7 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
         <label for="r-hours" id="r-hoursbox">Temps par coup<select id="r-hours"><option value="12">12 heures</option><option value="24">24 heures</option><option value="48">48 heures</option><option value="72">72 heures</option></select></label>
       </div>
       <label class="check" for="r-ranked"><input type="checkbox" id="r-ranked"> Partie classée (compte pour l’Élo)</label>
+      <label class="check" for="r-auto"><input type="checkbox" id="r-auto"> Lancer la partie dès que toutes les places sont prises</label>
       <label class="check" for="r-public"><input type="checkbox" id="r-public"> Salle publique : visible dans la liste des salles ouvertes</label>
       <label class="check" for="r-sudden" id="r-suddenbox" hidden><input type="checkbox" id="r-sudden"> Mort subite : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours</label>
       <div class="seats" id="seats"></div>
@@ -1384,7 +1386,7 @@ async function createGame(){
   $('#create-err').textContent=''; busy(true);
   try{
     const o={np:+$('#np').value||2,n:+$('#size').value,mode:$('#mode').value,hours:+$('#hours').value,ranked:$('#ranked').checked};
-    o.sudden=o.np>4&&$('#sudden').checked; o.public=$('#public').checked;
+    o.sudden=o.np>4&&$('#sudden').checked; o.public=$('#public').checked; o.auto=$('#auto').checked;
     if($('#opp').value==='ai') o.ai={level:+$('#level').value||3};
     if(window.__TURN_MS) o.turnMs=window.__TURN_MS;   // essais uniquement
     const r=await Net.call('create',o);
@@ -1430,11 +1432,13 @@ function renderRoom(){
   $('#r-hoursbox').hidden=d.mode!=='long';
   const rk=$('#r-ranked'); rk.checked=!!d.ranked; rk.disabled=!host;
   const pb=$('#r-public'); pb.checked=!!d.public; pb.disabled=!host;
+  const au=$('#r-auto'); au.checked=!!d.auto; au.disabled=!host;
   const sd=$('#r-sudden'); $('#r-suddenbox').hidden=d.np<=4; sd.checked=!!d.sudden; sd.disabled=!host;
   const free=d.seats.filter(s=>!s.filled).length, joined=d.np-free, humans=d.seats.filter(s=>s.filled&&!s.bot).length;
   $('#roomnote').textContent=host
     ?'Tu règles la partie. Envoie le lien à tes amis : en l’ouvrant, ils prennent une place. Tu peux ajouter des IA sur les places libres.'
     :`${d.host>=0?d.seats[d.host].name:'Le créateur'} règle la partie et la lancera. Tu peux choisir ta place.`;
+  if(d.auto) $('#roomnote').textContent+=' La partie démarre toute seule dès que toutes les places sont prises.';
   // places
   const box=$('#seats'); box.textContent='';
   d.seats.forEach((s,i)=>{
@@ -1491,6 +1495,7 @@ $('#r-hours').addEventListener('change',e=>cfgCall({mode:'long',hours:+e.target.
 $('#r-ranked').addEventListener('change',e=>cfgCall({ranked:e.target.checked}));
 $('#r-sudden').addEventListener('change',e=>cfgCall({sudden:e.target.checked}));
 $('#r-public').addEventListener('change',e=>cfgCall({public:e.target.checked}));
+$('#r-auto').addEventListener('change',e=>cfgCall({auto:e.target.checked}));
 $('#r-fillgo').addEventListener('click',async()=>{ try{ await Net.call('fill',{code,level:+$('#r-fill').value}); }catch(e){ toast(errMsg(e)); } });
 $('#leaveroom').addEventListener('click',async()=>{ try{ await Net.call('leave',{code}); }catch(e){ toast(errMsg(e)); return; } leave(); });
 
@@ -1784,7 +1789,7 @@ function fillLevels(){
 }
 function updateModeNote(){
   const ai=$('#opp').value==='ai', long=$('#mode').value==='long';
-  $('#levelbox').hidden=!ai; $('#moderow').hidden=ai; $('#hoursbox').hidden=!long; $('#publicbox').hidden=ai;
+  $('#levelbox').hidden=!ai; $('#moderow').hidden=ai; $('#hoursbox').hidden=!long; $('#publicbox').hidden=ai; $('#autobox').hidden=ai;
   $('#create').textContent=ai?'Jouer contre l’IA':'Créer une salle';
   let t;
   if(ai) t='Tu joues tout de suite, sans attendre personne. Tu peux fermer la page : la partie reste dans « Mes parties ».';

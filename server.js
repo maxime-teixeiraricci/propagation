@@ -335,7 +335,7 @@ function viewFor(g, pid) {
   return {
     code: g.code, n: g.n, h: g.h || g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status,
     o: g.o, c: g.c, turn: g.turn, seq: g.seq, last: g.last, winner: g.winner,
-    teams: g.teams || 0, host: g.players.indexOf(hostOf(g)), sudden: !!g.sudden, dead: g.dead || 0, round: g.round || 0, public: !!g.public,
+    teams: g.teams || 0, host: g.players.indexOf(hostOf(g)), sudden: !!g.sudden, dead: g.dead || 0, round: g.round || 0, public: !!g.public, auto: !!g.auto,
     seats: g.players.map((p, x) => {
       const w = who(p), cq = g.cq && w;
       return { filled: !!p, name: cq && w.bot ? cqDefName(g) : w ? w.name : '', rating: cq ? null : w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1,
@@ -457,6 +457,25 @@ function pushProfile(pid) {
   for (const c of clients) if (c.pid === pid) send(c, { t: 'profile', profile: prof(p) });
 }
 
+function startGame(g) {
+  const filled = g.players.filter(Boolean);
+  if (filled.length < 2) throw new Err('not_enough');
+  if (g.teams && filled.length < g.np) throw new Err('not_full');      // en équipes, toutes les places doivent être prises
+  if (filled.length < g.np) {                                           // sans équipes : les places vides sont retirées
+    g.players = filled;
+    const sizes = E.SIZES[filled.length];
+    if (sizes && !sizes.slice(0, 3).includes(g.n)) g.n = sizes[3];
+  }
+  const bot = g.players.find(isBot);
+  g.ai = bot ? botLevel(bot) : 0;
+  resetBoard(g, g.players.length);
+  g.seq++; g.updated = Date.now();
+  startPlaying(g); markG(g); pushGame(g);
+}
+// Option « lancer dès que toutes les places sont prises » (cochée par défaut à la création).
+function maybeAutoStart(g) {
+  if (g.status === 'waiting' && g.auto && g.players.length >= 2 && g.players.every(Boolean)) startGame(g);
+}
 function lobbyOf(c, m) {                           // la salle d'attente de c, dont c est le créateur
   const g = games.get(String(m.code || '').toUpperCase());
   if (!g) throw new Err('not_found');
@@ -505,7 +524,7 @@ const OPS = {
     const b = E.newBoard(n, np, rnd(np)), now = Date.now();
     const g = { code, n, np, mode, turnMs, ranked: m.ranked !== false, status: 'waiting', players: new Array(np).fill(null),
       o: b.o, c: b.c, turn: rnd(np), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0,
-      sudden: np > 4 && !!m.sudden, dead: 0, round: 0, public: !ai && m.public !== false };
+      sudden: np > 4 && !!m.sudden, dead: 0, round: 0, public: !ai && m.public !== false, auto: m.auto !== false };
     g.players[0] = c.pid;
     if (ai) { g.ai = ai; for (let k = 1; k < np; k++) g.players[k] = `bot:${ai}:${k}`; startPlaying(g); }
     games.set(code, g); markG(g);
@@ -518,7 +537,7 @@ const OPS = {
     const before = g.players.indexOf(c.pid);
     const idx = joinSeat(g, c.pid);
     if (idx >= 0) c.subs.add(g.code);               // rejoindre = regarder la partie (évite une notification inutile)
-    if (idx !== before) pushGame(g);
+    if (idx !== before) { pushGame(g); maybeAutoStart(g); }
     return { idx };
   },
   sub(c, m) {
@@ -543,20 +562,7 @@ const OPS = {
     return {};
   },
   start(c, m) {                                   // le créateur de la salle lance la partie
-    const g = lobbyOf(c, m);
-    const filled = g.players.filter(Boolean);
-    if (filled.length < 2) throw new Err('not_enough');
-    if (g.teams && filled.length < g.np) throw new Err('not_full');      // en équipes, toutes les places doivent être prises
-    if (filled.length < g.np) {                                           // sans équipes : les places vides sont retirées
-      g.players = filled;
-      const sizes = E.SIZES[filled.length];
-      if (sizes && !sizes.slice(0, 3).includes(g.n)) g.n = sizes[3];
-    }
-    const bot = g.players.find(isBot);
-    g.ai = bot ? botLevel(bot) : 0;
-    resetBoard(g, g.players.length);
-    g.seq++; g.updated = Date.now();
-    startPlaying(g); markG(g); pushGame(g);
+    startGame(lobbyOf(c, m));
     return {};
   },
   cfg(c, m) {                                     // réglages de la salle (créateur)
@@ -591,8 +597,9 @@ const OPS = {
     if (m.ranked !== undefined) g.ranked = !!m.ranked;
     if (m.sudden !== undefined) g.sudden = !!m.sudden;
     if (m.public !== undefined) g.public = !!m.public;
+    if (m.auto !== undefined) g.auto = !!m.auto;
     if (g.np <= 4) g.sudden = false;                  // la mort subite n'existe qu'à 6 et 8 joueurs
-    g.updated = Date.now(); markG(g); pushGame(g);
+    g.updated = Date.now(); markG(g); pushGame(g); maybeAutoStart(g);
     return {};
   },
   seatai(c, m) {                                  // met, change ou retire une IA sur une place (créateur)
@@ -602,14 +609,14 @@ const OPS = {
     const cur = g.players[seat];
     if (cur && !isBot(cur)) throw new Err('forbidden');
     g.players[seat] = level ? `bot:${level}:${seat}` : null;
-    g.updated = Date.now(); markG(g); pushGame(g);
+    g.updated = Date.now(); markG(g); pushGame(g); maybeAutoStart(g);
     return {};
   },
   fill(c, m) {                                    // complète les places libres avec des IA (créateur)
     const g = lobbyOf(c, m);
     const level = Math.min(Bot.LEVELS.length, Math.max(1, Math.floor(Number(m.level)) || 4));
     for (let x = 0; x < g.np; x++) if (!g.players[x]) g.players[x] = `bot:${level}:${x}`;
-    g.updated = Date.now(); markG(g); pushGame(g);
+    g.updated = Date.now(); markG(g); pushGame(g); maybeAutoStart(g);
     return {};
   },
   kickseat(c, m) {                                // retire un joueur de la salle (créateur)
