@@ -818,7 +818,7 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
       </ol>
       <h3 class="sub">À savoir</h3>
       <ul class="tips">
-        <li><b>Partie classée :</b> chacun commence à 1000 Élo. Battre un joueur mieux classé rapporte plus. Les 15 rangs vont de D (700 Élo) à X (3500 Élo), par paliers de 200 points.</li>
+        <li><b>Partie classée :</b> chacun commence à 1000 Élo. Battre un joueur mieux classé rapporte plus. Les 15 rangs vont de D (700 Élo) à X (3500 Élo), par paliers de 200 points. Le rang X n'a pas de plafond : X0, X1, X2… tous les 200 points.</li>
         <li><b>Longue durée :</b> chaque joueur a de 12 h à 72 h pour jouer son coup, sinon il est éliminé. Tu peux fermer la page entre deux coups.</li>
         <li><b>Mort subite</b> (à 6 et 8 joueurs, en option) : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours.</li>
       </ul>
@@ -1053,14 +1053,14 @@ const ord=r=>r===1?'1er':r+'e';
 
 /* ---------- rangs ---------- */
 // Écusson d'un rang : une lettre en couleur sur une plaque sombre, comme les notes des jeux de classement.
-// Pierre = D, puis C−, C, C+, B−, B, B+, A−, A, A+, S−, S, S+, SS, et Infinite Master X = X. Le cadre change à chaque palier (argent, or, arc-en-ciel).
+// D, C−, C, C+, B−, B, B+, A−, A, A+, S−, S, S+, SS, puis X0, X1, X2… Le cadre change à chaque palier (argent, or, arc-en-ciel).
 const RCOL=['#A99BE0','#6FD0B0','#52D68A','#7BE05A','#C8E04A','#FFD43B','#FFB02E','#FF8A3D','#FF6B4A','#FF4D6D','#FF4DB8','#D65CFF','#9B7BFF','#5CC8FF','#FF7A9C'];
 const RLET=['D','C−','C','C+','B−','B','B+','A−','A','A+','S−','S','S+','SS','X'];
 const mixc=(hex,t,to)=>{ const v=parseInt(hex.slice(1),16); return '#'+[v>>16&255,v>>8&255,v&255].map(c=>Math.round(c+(to-c)*t).toString(16).padStart(2,'0')).join(''); };
 let embN=0;
 function emblem(elo,h){
-  const r=rankOf(elo), k=r.index, base=RCOL[k], tier=r.tier, id='e'+k+'_'+(embN++), L=RLET[k], X=k===14, SS=k===13;
-  const letter=L[0], mod=L.length>1&&!SS?L[1]:'';
+  const r=rankOf(elo), k=r.index, base=RCOL[k], tier=r.tier, id='e'+k+'_'+(embN++), L=RLET[k], X=k===14, SS=k===13;   // X : r.sub = 0, 1, 2…
+  const letter=L[0], mod=L.length>1&&!SS&&!X?L[1]:'', xs=X?String(r.sub):'';
   const hi=mixc(base,.55,255), lo=mixc(base,.4,0);
   const rim=tier===0?['#E6EEFF','#8FA2CF']:tier===1?['#FFF3B0','#D39A14']:['#FF9ACB','#FFE27A','#7BF0B8','#8FA8FF'];
   const face=tier===2?['#2D2270','#0E0A36']:['#33438F','#141B52'];
@@ -1070,16 +1070,18 @@ function emblem(elo,h){
     +`<linearGradient id="${id}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset=".55" stop-color="${base}"/><stop offset="1" stop-color="${lo}"/></linearGradient>`
     +(X?`<linearGradient id="${id}x" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7A7A"/><stop offset=".35" stop-color="#FFE066"/><stop offset=".65" stop-color="#5EE6A0"/><stop offset="1" stop-color="#9C8CFF"/></linearGradient>`:'')
     +`<clipPath id="${id}c"><rect x="4" y="4" width="48" height="48" rx="11"/></clipPath></defs>`;
-  const fs=SS?33:X?38:36, cx=mod?23:28, cy=X?38.5:39.5;
+  const fs=SS?33:X?(xs.length>1?30:34):36, cx=mod?23:X?(xs.length>1?17:21):28, cy=X?37.5:39.5;
   const txt=(dx,dy,f,extra)=>`<text x="${cx+dx}" y="${cy+dy}" text-anchor="middle" font-family="Rubik,Nunito,system-ui,sans-serif" font-weight="900" font-size="${fs}" ${SS?'letter-spacing="-3.5" ':''}fill="${f}"${extra||''}>${SS?'SS':letter}</text>`;
+  // sous-niveau du rang X (X0, X1, …) : petit chiffre en bas à droite
+  const xsz=xs.length>1?17:21, subT=(f,dy,extra)=>xs?`<text x="${xs.length>1?46:45}" y="${46+dy}" text-anchor="end" font-family="Rubik,Nunito,system-ui,sans-serif" font-weight="900" font-size="${xsz}" fill="${f}"${extra||''}>${xs}</text>`:'';
   // « + » ou « − » en haut à droite, dessinés (pas de police)
   const modG=mod?(mod==='+'?`<rect x="36.5" y="12" width="12" height="4.6" rx="1.6" fill="${fill}"/><rect x="40.2" y="8.3" width="4.6" height="12" rx="1.6" fill="${fill}"/>`:`<rect x="36.5" y="12" width="12" height="4.6" rx="1.6" fill="${fill}"/>`):'';
   const glow=(k>=13)?` style="filter:drop-shadow(0 0 3px ${X?'#9C8CFF':'#5CC8FF'})"`:'';
-  return `<svg class="emb" viewBox="0 0 56 56" ${h?`height="${h}" width="${h}"`:''} role="img" aria-label="${r.name} (${L})"${glow}>${defs}`
+  return `<svg class="emb" viewBox="0 0 56 56" ${h?`height="${h}" width="${h}"`:''} role="img" aria-label="${r.name} (${r.letter||L})"${glow}>${defs}`
     +`<rect x="2" y="2" width="52" height="52" rx="13" fill="url(#${id}r)"/><rect x="4.4" y="4.4" width="47.2" height="47.2" rx="11" fill="url(#${id}f)"/>`
     +`<g clip-path="url(#${id}c)"><ellipse cx="18" cy="9" rx="26" ry="11" fill="#fff" opacity=".13" transform="rotate(-14 18 9)"/></g>`
-    +`<g opacity=".45">${txt(0,1.8,'#000')}${mod?`<g transform="translate(0 1.8)">${modG.replace(/url\(#[^)]+\)/g,'#000')}</g>`:''}</g>`
-    +txt(0,0,fill,` stroke="#fff" stroke-opacity=".35" stroke-width=".7" paint-order="stroke"`)+modG+`</svg>`;
+    +`<g opacity=".45">${txt(0,1.8,'#000')}${subT('#000',1.8)}${mod?`<g transform="translate(0 1.8)">${modG.replace(/url\(#[^)]+\)/g,'#000')}</g>`:''}</g>`
+    +txt(0,0,fill,` stroke="#fff" stroke-opacity=".35" stroke-width=".7" paint-order="stroke"`)+subT(fill,0,` stroke="#fff" stroke-opacity=".35" stroke-width=".6" paint-order="stroke"`)+modG+`</svg>`;
 }
 const rankColor=elo=>RCOL[rankOf(elo).index];
 // Rang d'un joueur : écusson + nom du rang + Élo, pour les cartes de la partie.
@@ -1517,7 +1519,7 @@ function renderProfile(p){
   $('#elo').textContent=p.elo;
   { const r=rankOf(p.elo); $('#rankline').hidden=false; $('#rk-emb').innerHTML=emblem(p.elo,52); $('#rk-name').textContent=r.name;
     const f=$('#rk-fill'); f.style.width=Math.round(r.progress*100)+'%'; f.style.setProperty('--rkc',rankColor(p.elo));
-    $('#rk-next').textContent=(r.nextName?`Encore ${r.toNext} Élo pour ${r.nextName}`:'Rang maximum')+` · rang ${r.index+1} sur 15`; }
+    $('#rk-next').textContent=`Encore ${r.toNext} Élo pour ${r.nextName}`+(r.sub>=0?' · rang X, sans plafond':` · rang ${r.index+1} sur 15`); }
   const ng=p.games, nw=p.wins;
   $('#pstats').textContent=ng?`${ng} partie${ng>1?'s':''} classée${ng>1?'s':''} · ${nw} victoire${nw>1?'s':''}`:'Pas encore de partie classée. Tout le monde commence à 1000.';
   const nm=$('#name'); if(document.activeElement!==nm) nm.value=p.name;
@@ -1602,11 +1604,11 @@ async function showRitual(r){
   if(!live()) return; dl.classList.add('on');
   const swap=(cls)=>{ badge.className='rt-badge '+cls; badge.innerHTML=emblem(a,128); $('#rt-name').textContent=ra.name; fill.style.setProperty('--rkc',rankColor(a)); };
   const reset=(w)=>{ fill.style.transition='none'; fill.style.width=w; void fill.offsetWidth; fill.style.transition=''; };
-  if(ra.index>rb.index){            // promotion
+  if(ra.level>rb.level){            // promotion
     fill.style.width='100%'; await wait(1000); if(!live()) return;
     reset('0%'); swap('pop'); ban.textContent=`Promotion ! ${ra.name}`; ban.classList.add('promo'); confetti(true); Sfx.promo();
     await wait(300); fill.style.width=Math.round(ra.progress*100)+'%';
-  } else if(ra.index<rb.index){     // relégation
+  } else if(ra.level<rb.level){     // relégation
     fill.style.width='0%'; await wait(1000); if(!live()) return;
     reset('100%'); swap('drop'); ban.textContent=`Relégation : ${ra.name}`; ban.classList.add('relega');
     await wait(300); fill.style.width=Math.round(ra.progress*100)+'%';
@@ -1615,7 +1617,7 @@ async function showRitual(r){
     if(win) confetti(false);
   }
   await wait(900); if(!live()) return;
-  nx.textContent=ra.nextName?`Encore ${ra.toNext} Élo pour ${ra.nextName}`:'Rang maximum atteint';
+  nx.textContent=`Encore ${ra.toNext} Élo pour ${ra.nextName}`;
 }
 function closeRitual(){ ritualRun++; $('#ritual').hidden=true; }
 $('#rt-ok').addEventListener('click',closeRitual);

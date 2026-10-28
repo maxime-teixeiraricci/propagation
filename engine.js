@@ -172,21 +172,24 @@
     return d.map(Math.round);
   }
 
-  // Rangs : 15 rangs en 3 paliers de 5, de D à X. L'échelle d'Élo va de 700 (plancher) à 3500 (début du rang X) : 200 points par rang.
+  // Rangs : 15 rangs en 3 paliers de 5, notés uniquement par leur lettre : D, C−, C, C+, B−, B, B+, A−, A, A+, S−, S, S+, SS, X. L'échelle d'Élo va de 700 (plancher) à 3500 (début du rang X) : 200 points par rang.
   // Un nouveau joueur (Élo 1000) démarre au milieu de C−. ELO_SCALE étire la courbe d'Élo (écart de 400 → 400 × ELO_SCALE pour 10 contre 1)
   // afin que les écarts entre niveaux d'IA gardent le même sens qu'avant l'élargissement de l'échelle.
   const ELO_MIN = 700, ELO_MAX_RANK = 3500, ELO_SCALE = 2800 / 1860;
-  const RANK_TIERS = ['Matières', 'Gemmes', 'Maîtres'];
-  const RANK_NAMES = ['Pierre', 'Cuivre', 'Bronze', 'Argent', 'Or', 'Jade', 'Émeraude', 'Rubis', 'Saphir', 'Diamant',
-    'Master', 'Grand Master', 'Mythic Master', 'Eternal Master', 'Infinite Master X'];
+  const RANK_TIERS = ['D à B−', 'B à A+', 'S− à X'];
+  const RANK_NAMES = ['D', 'C−', 'C', 'C+', 'B−', 'B', 'B+', 'A−', 'A', 'A+', 'S−', 'S', 'S+', 'SS', 'X'];
   const RANK_FLOORS = Array.from({ length: 15 }, (_, i) => 700 + 200 * i);
+  // Le rang X n'a pas de plafond : X0 à partir de 3500, puis X1 à 3700, X2 à 3900… (un sous-niveau tous les 200 points).
   function rankOf(elo) {
     elo = Math.max(RANK_FLOORS[0], Math.round(Number(elo) || 0));
     let k = 0;
     for (let i = 0; i < RANK_FLOORS.length; i++) if (elo >= RANK_FLOORS[i]) k = i;
-    const lo = RANK_FLOORS[k], hi = k + 1 < RANK_FLOORS.length ? RANK_FLOORS[k + 1] : null;
-    return { index: k, tier: Math.floor(k / 5), tierName: RANK_TIERS[Math.floor(k / 5)], pos: k % 5 + 1, name: RANK_NAMES[k],
-      lo, hi, progress: hi ? (elo - lo) / (hi - lo) : 1, toNext: hi ? hi - elo : 0, nextName: k + 1 < RANK_NAMES.length ? RANK_NAMES[k + 1] : null };
+    const top = k === RANK_FLOORS.length - 1;
+    const sub = top ? Math.floor((elo - RANK_FLOORS[k]) / 200) : -1;
+    const lo = top ? RANK_FLOORS[k] + 200 * sub : RANK_FLOORS[k], hi = top ? lo + 200 : RANK_FLOORS[k + 1];
+    return { index: k, level: k + Math.max(sub, 0), sub, tier: Math.floor(k / 5), tierName: RANK_TIERS[Math.floor(k / 5)], pos: k % 5 + 1,
+      name: top ? 'X' + sub : RANK_NAMES[k], letter: top ? 'X' + sub : RANK_NAMES[k],
+      lo, hi, progress: (elo - lo) / (hi - lo), toNext: hi - elo, nextName: top ? 'X' + (sub + 1) : RANK_NAMES[k + 1] };
   }
 
   const api = { ELO_MIN, ELO_MAX_RANK, ELO_SCALE, RANK_TIERS, RANK_NAMES, RANK_FLOORS, rankOf, neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
