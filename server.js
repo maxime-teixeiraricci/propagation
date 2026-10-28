@@ -635,11 +635,13 @@ function tourSummary(t, pid) {
 // des heures de réveil et de coucher, des salles qu'ils rejoignent ou créent, des tournois, un camp en Conquête.
 // Ils jouent au niveau de leur IA (donc leur Élo se stabilise à leur vrai niveau), avec des délais de réflexion humains.
 // Ils n'ont aucun accès au réseau : le serveur agit pour eux en appelant les mêmes opérations que les joueurs.
-const RES_COUNT = process.env.RESIDENTS !== undefined ? Math.max(0, Math.min(24, Math.floor(Number(process.env.RESIDENTS)) || 0)) : (TEST ? 0 : 12);
+const RES_COUNT = process.env.RESIDENTS !== undefined ? Math.max(0, Math.min(60, Math.floor(Number(process.env.RESIDENTS)) || 0)) : (TEST ? 0 : 42);
 const RES_FAST = TEST && process.env.RES_FAST === '1';          // essais : horloge accélérée, pas de nuit
 const RES_TAG = '[BOT] ';
-const RES_NAMES = ['Léa', 'Hugo', 'Inès', 'Théo', 'Zoé', 'Nolan', 'Sacha', 'Maëlys', 'Yanis', 'Lucie', 'Mehdi', 'Jade', 'Anaïs', 'Tom', 'Clara', 'Elias', 'Manon', 'Kylian', 'Nina', 'Ravi', 'Éva', 'Axel', 'Lola', 'Noé'];
-const RES_LVL = [2, 3, 1, 4, 3, 5, 2, 6, 4, 3, 7, 5, 2, 4, 6, 3, 5, 8, 2, 4, 3, 5, 6, 4];
+const RES_NAMES = ['Léa', 'Hugo', 'Inès', 'Théo', 'Zoé', 'Nolan', 'Sacha', 'Maëlys', 'Yanis', 'Lucie', 'Mehdi', 'Jade', 'Anaïs', 'Tom', 'Clara', 'Elias', 'Manon', 'Kylian', 'Nina', 'Ravi', 'Éva', 'Axel', 'Lola', 'Noé',
+  'Louis', 'Alice', 'Gabin', 'Romane', 'Adam', 'Chloé', 'Enzo', 'Camille', 'Ethan', 'Margaux', 'Léo', 'Sarah', 'Paul', 'Julia', 'Arthur', 'Louna', 'Victor', 'Emma'];
+const RES_LVL = [2, 3, 1, 4, 3, 5, 2, 6, 4, 3, 7, 5, 2, 4, 6, 3, 5, 8, 2, 4, 3, 5, 6, 4,
+  3, 5, 2, 4, 6, 3, 7, 4, 2, 5, 3, 6, 4, 2, 5, 3, 4, 8];
 const RES_MAX_ACTIVE = 3;
 const humanName = s => { const n = clean(s); return n.replace(/^\[\s*bot\s*\]\s*/i, ''); };      // personne ne peut se faire passer pour un [BOT]
 function ensureResidents() {
@@ -721,7 +723,7 @@ function resJoinRoom(p, fc, now) {
 }
 function resCreateRoom(p, fc, now) {
   let theirs = 0; for (const g of games.values()) if (g.status === 'waiting' && isRes(g.host)) theirs++;
-  if (theirs >= (RES_COUNT > 12 ? 2 : 1)) return false;
+  if (theirs >= Math.min(3, Math.ceil(RES_COUNT / 14))) return false;
   const np = rnd(100) < 75 ? 2 : 4, long = rnd(100) < 30;
   OPS.create(fc, { np, mode: long ? 'long' : 'live', hours: [24, 48][rnd(2)], ranked: rnd(100) < 85, public: true, auto: true }); return true;
 }
