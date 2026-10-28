@@ -726,6 +726,8 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
 #t-rules{padding:12px 16px}
 #t-rules summary{font:800 16px var(--display)}
 #t-rules ul{margin:12px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-weight:600; line-height:1.4}
+.tg{display:inline-block; margin-right:6px; padding:0 6px 1px; border-radius:6px; border:2px solid currentColor; font:800 10.5px/1.5 var(--body); font-style:normal; letter-spacing:.04em; vertical-align:2px; opacity:.85}
+#tcard{order:5} #jcard{order:6} #rulesbox{order:7}
 </style>
 </head>
 <body>
@@ -790,6 +792,19 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
       </div>
     </div>
 
+    <div class="colR">
+    <div class="card major stack" id="gcard" hidden>
+      <h2>Mes parties <span class="badge" id="gbadge" hidden></span></h2>
+      <div class="games" id="games"><p class="note">Connexion…</p></div>
+    </div>
+
+    <div class="card major vitrine" id="topcard">
+      <h2>Classement</h2>
+      <ol class="top" id="top"></ol>
+      <button class="btn ghost small" id="topmore" hidden></button>
+      <p class="note" id="topnote"></p>
+    </div>
+
     <div class="card major stack tour-card" id="tcard" hidden>
       <h2>Tournois <span class="badge" id="tbadge" hidden></span></h2>
       <p class="note" id="tc-trophy" hidden></p>
@@ -818,19 +833,6 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
           <p class="note err" id="t-err"></p>
         </div>
       </details>
-    </div>
-
-    <div class="colR">
-    <div class="card major stack" id="gcard" hidden>
-      <h2>Mes parties <span class="badge" id="gbadge" hidden></span></h2>
-      <div class="games" id="games"><p class="note">Connexion…</p></div>
-    </div>
-
-    <div class="card major vitrine" id="topcard">
-      <h2>Classement</h2>
-      <ol class="top" id="top"></ol>
-      <button class="btn ghost small" id="topmore" hidden></button>
-      <p class="note" id="topnote"></p>
     </div>
     </div>
 
@@ -903,6 +905,7 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
       <ul class="tips">
         <li><b>Partie classée :</b> chacun commence à 1000 Élo. Battre un joueur mieux classé rapporte plus. Les 15 rangs vont de D (700 Élo) à X (3500 Élo), par paliers de 200 points. Le rang X n'a pas de plafond : X0, X1, X2… tous les 200 points.</li>
         <li><b>Longue durée :</b> chaque joueur a de 12 h à 72 h pour jouer son coup, sinon il est éliminé. Tu peux fermer la page entre deux coups.</li>
+        <li><b>Joueurs BOT :</b> des joueurs automatiques, marqués BOT, ont un profil et un Élo comme les autres. Ils créent et rejoignent des salles, jouent avec des délais de réflexion, dorment la nuit, entrent dans les tournois et attaquent en Conquête. Tu peux les retirer d’une salle comme n’importe quel joueur.</li>
         <li><b>Mort subite</b> (à 6 et 8 joueurs, en option) : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours.</li>
       </ul>
     </details>
@@ -1440,7 +1443,7 @@ function renderMeta(){
 }
 function updateKick(){
   const b=$('#kick');
-  const show=mode==='online'&&!!remote&&!remote.seats[view.turn].bot&&remote.mode==='live'&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&now()-turnSince>KICK_MS;
+  const show=mode==='online'&&!!remote&&!remote.seats[view.turn].bot&&!remote.seats[view.turn].auto&&remote.mode==='live'&&remote.status==='playing'&&!!view.o&&view.winner<0&&me>=0&&view.turn!==me&&!anim&&now()-turnSince>KICK_MS;
   b.hidden=!show;
   if(show) b.textContent=`${getNames()[view.turn]} ne répond plus ? L’éliminer`;
 }
@@ -1793,7 +1796,7 @@ function drawTop(r){
     const li=document.createElement('li'); if(cls) li.className=cls;
     const a=document.createElement('span'); a.className='r'; a.textContent=i+1;
     const em=document.createElement('span'); em.className='em'; em.innerHTML=emblem(p.elo,i===0?76:i<3?60:24); em.title=rankOf(p.elo).name;
-    const b=document.createElement('span'); b.className='n'; b.textContent=p.name;
+    const b=document.createElement('span'); b.className='n'; b.textContent=p.bot?p.name.replace(/^\[BOT\]\s*/,''):p.name; if(p.bot){ const tg=document.createElement('i'); tg.className='tg'; tg.textContent='BOT'; tg.title='Joueur automatique : il a un profil et joue comme tout le monde'; b.prepend(tg); }
     const c=document.createElement('span'); c.className='e'; c.textContent=p.elo;
     li.append(a,em,b,c); ol.append(li);
   };
