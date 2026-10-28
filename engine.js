@@ -3,22 +3,24 @@
   'use strict';
 
   // Anneau d'une case : distance au bord le plus proche (0 = la bordure de la grille).
-  function ring(n, i) { const x = i % n, y = (i - x) / n; return Math.min(x, y, n - 1 - x, n - 1 - y); }
+  // h : hauteur de la grille (par défaut n, grille carrée). Les zones de la conquête sont des rectangles n × h.
+  function ring(n, i, h) { h = h || n; const x = i % n, y = (i - x) / n; return Math.min(x, y, n - 1 - x, h - 1 - y); }
   // Mort subite : nombre maximal d'anneaux qui peuvent disparaître (il reste toujours un carré de 2×2 ou 3×3 au centre).
-  const maxDead = n => Math.max(0, Math.floor((n - 2) / 2));
+  const maxDead = (n, h) => Math.max(0, Math.floor((Math.min(n, h || n) - 2) / 2));
   const SUDDEN_START = 30;     // mort subite : la première bordure disparaît au 30e tour...
   const SUDDEN_EVERY = 5;      // ...puis une autre tous les 5 tours
   // Nombre de tours avant le prochain rétrécissement (round : tours déjà terminés).
   const suddenLeft = round => (round < SUDDEN_START ? SUDDEN_START - round : SUDDEN_EVERY - ((round - SUDDEN_START) % SUDDEN_EVERY));
 
   // dead (facultatif) : nombre d'anneaux disparus. Les cases disparues n'existent plus : les points qui y vont sont perdus.
-  function neighbors(n, i, dead) {
+  function neighbors(n, i, dead, h) {
+    h = h || n;
     const x = i % n, y = (i - x) / n, r = [];
     if (x > 0) r.push(i - 1);
     if (x < n - 1) r.push(i + 1);
     if (y > 0) r.push(i - n);
-    if (y < n - 1) r.push(i + n);
-    return dead ? r.filter(m => ring(n, m) >= dead) : r;
+    if (y < h - 1) r.push(i + n);
+    return dead ? r.filter(m => ring(n, m, h) >= dead) : r;
   }
 
   // Cases de départ, dans l'ordre où elles se suivent autour de la grille (sens des aiguilles d'une montre).
@@ -39,7 +41,8 @@
   // Nombre de joueurs -> tailles de grille proposées (les trois premières) et taille par défaut (la quatrième).
   const SIZES = { 2: [5, 6, 8, 6], 4: [6, 8, 10, 8], 6: [9, 10, 12, 10], 8: [10, 12, 14, 12] };
 
-  function startCells(n, np) {
+  function startCells(n, np, h) {
+    if (h && h !== n) return np === 2 ? [n + 1, (h - 2) * n + n - 2] : [];      // rectangle : deux départs symétriques (rotation de 180°)
     const t = LAYOUTS[np + '-' + n];
     if (t) return t.map(([x, y]) => y * n + x);
     const m = n - 2, L = 4 * (m - 1), out = [];
@@ -54,11 +57,13 @@
   }
 
   // rot : décalage des places (le joueur k prend la k+rot-ième case de départ), tiré au sort à chaque partie.
-  function newBoard(n, np, rot) {
-    np = np || 2; rot = rot || 0;
-    const o = new Array(n * n).fill(-1), c = new Array(n * n).fill(0);
-    startCells(n, np).forEach((i, k) => { const p = ((k - rot) % np + np) % np; o[i] = p; c[i] = 1; });
-    return { n, o, c };
+  function newBoard(n, np, rot, h) {
+    np = np || 2; rot = rot || 0; h = h || n;
+    const o = new Array(n * h).fill(-1), c = new Array(n * h).fill(0);
+    startCells(n, np, h).forEach((i, k) => { const p = ((k - rot) % np + np) % np; o[i] = p; c[i] = 1; });
+    const b = { n, o, c };
+    if (h !== n) b.h = h;
+    return b;
   }
 
   // Le joueur p ajoute un point en i. Seuil fixe : 4 points, partout. Les points qui sortent de la grille sont perdus.
@@ -67,7 +72,7 @@
   // board.dead : anneaux déjà disparus. board.shrinkTo : si supérieur, la bordure disparaît après le coup (mort subite),
   // sauf si le coup gagne la partie ou s'il ne resterait plus aucune case.
   function simulate(board, i, p, team) {
-    const n = board.n, o = board.o.slice(), c = board.c.slice(), dead = board.dead || 0;
+    const n = board.n, H = board.h || n, o = board.o.slice(), c = board.c.slice(), dead = board.dead || 0;
     c[i] += 1; o[i] = p;
     const frames = [{ o: o.slice(), c: c.slice(), got: [i], dead }];
     let winner = -1;
@@ -77,7 +82,7 @@
       if (!hot.length) break;
       const got = new Set();
       for (const k of hot) c[k] -= 4;
-      for (const k of hot) for (const m of neighbors(n, k, dead)) {
+      for (const k of hot) for (const m of neighbors(n, k, dead, H)) {
         const ally = team && c[m] > 0 && o[m] >= 0 && team[o[m]] === team[p];
         c[m] += 1; if (!ally) o[m] = p; got.add(m);
       }
@@ -88,12 +93,12 @@
       if (owners.size === 1) { winner = first; break; }
     }
     let newDead = dead;
-    const to = Math.min(board.shrinkTo || 0, maxDead(n));
+    const to = Math.min(board.shrinkTo || 0, maxDead(n, H));
     if (winner < 0 && to > dead) {
       let any = false;
-      for (let k = 0; k < c.length; k++) if (c[k] > 0 && ring(n, k) >= to) { any = true; break; }
+      for (let k = 0; k < c.length; k++) if (c[k] > 0 && ring(n, k, H) >= to) { any = true; break; }
       if (any) {
-        for (let k = 0; k < c.length; k++) if (ring(n, k) < to) { c[k] = 0; o[k] = -1; }
+        for (let k = 0; k < c.length; k++) if (ring(n, k, H) < to) { c[k] = 0; o[k] = -1; }
         newDead = to;
         frames.push({ o: o.slice(), c: c.slice(), got: [], dead: newDead, shrunk: true });
         const owners = new Set(); let first = -1;
@@ -114,7 +119,7 @@
     const wrapped = nextTurn(r.o, r.c, p, board.np) <= p;
     if (wrapped) round++;
     const dead = board.dead || 0;
-    if (wrapped && round >= SUDDEN_START && (round - SUDDEN_START) % SUDDEN_EVERY === 0 && dead < maxDead(board.n)) r = simulate(Object.assign({}, board, { shrinkTo: dead + 1 }), i, p, team);
+    if (wrapped && round >= SUDDEN_START && (round - SUDDEN_START) % SUDDEN_EVERY === 0 && dead < maxDead(board.n, board.h)) r = simulate(Object.assign({}, board, { shrinkTo: dead + 1 }), i, p, team);
     r.round = round;
     return r;
   }

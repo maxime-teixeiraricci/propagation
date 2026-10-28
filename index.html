@@ -534,6 +534,127 @@ details.more > :not(summary){margin-top:10px}
 #rulesbox .steps b,#rulesbox .tips b{font-weight:800}
 #rulesbox .tips{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px; font-size:14px; color:var(--muted); font-weight:600}
 #rulesbox h3.sub{margin-top:14px}
+
+/* ================= conquête : quatre camps, une carte ================= */
+:root{ --t-eau:#2B7BFF; --t-feu:#F0502D; --t-air:#F5B517; --t-terre:#2DAA64 }
+.tdisc{display:inline-grid; place-items:center; width:var(--d,34px); height:var(--d,34px); border-radius:50%; flex:none; color:#fff;
+  background:radial-gradient(circle at 35% 28%, color-mix(in srgb,var(--tc) 50%,#fff), var(--tc) 62%, color-mix(in srgb,var(--tc) 78%,#000)); border:2.5px solid #fff; box-shadow:0 2px 0 rgba(20,40,110,.35)}
+.tdisc[data-t="air"]{color:var(--ink)}
+.ti{display:block}
+
+/* accueil : la carte d'entrée */
+#ccard{order:2}
+#ncard{order:3} #topcard{order:4} #jcard{order:5} #rulesbox{order:6}
+.card.major.cq-card > h2:first-child{background:radial-gradient(rgba(255,255,255,.2) 1.6px, transparent 2.1px) 0 0/10px 10px, linear-gradient(#FF8A4C,#E5482A); text-shadow:0 2px 0 #8F2410; box-shadow:0 4px 0 rgba(143,36,16,.45)}
+.cqc{display:grid; grid-template-columns:116px minmax(0,1fr); gap:6px 18px; align-items:center}
+.mm{display:block; width:116px; height:116px; background:#D3E3FC; border:4px solid #fff; border-radius:18px; box-shadow:0 4px 0 rgba(30,70,160,.3)}
+.cqc-main{display:flex; flex-direction:column; gap:8px; min-width:0; align-items:flex-start}
+.cqc-lead{margin:0; font:800 18px/1.2 var(--display)}
+.cqc-chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{display:inline-flex; align-items:center; gap:5px; padding:2px 10px 2px 3px; background:#fff; border:2.5px solid #D3E3FC; border-radius:99px; font:800 13px var(--display)}
+.chip .tdisc{--d:22px; border-width:2px}
+.chip.mine{border-color:var(--tc)}
+#cq-go{font-size:17px; padding:10px 22px 11px}
+@media (max-width:420px){ .cqc{grid-template-columns:92px minmax(0,1fr); gap:6px 12px} .mm{width:92px; height:92px} }
+
+/* l'écran de conquête */
+#conquest{display:flex; flex-direction:column; gap:24px}
+.cq-head{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+.cq-title{flex:1; min-width:180px}
+.cq-title h2{margin:0; font:800 clamp(32px,8vw,44px)/1 var(--display); color:#FFD93D; -webkit-text-stroke:6px var(--ink); paint-order:stroke fill; text-shadow:0 4px 0 var(--ink); transform:rotate(-1deg); transform-origin:left center}
+.cq-title p{margin:8px 0 0; font-weight:800}
+.cq-teams{display:grid; grid-template-columns:1fr 1fr; gap:14px 12px; padding-top:6px}
+@media (min-width:640px){ .cq-teams{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.tm{position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-areas:"i n" "s s" "l l"; align-items:center; gap:3px 8px; text-align:left; padding:10px 12px; background:#fff; border:3px solid #fff; border-radius:16px; box-shadow:0 4px 0 #A9C3EE; color:var(--fg); font:inherit; transition:transform .1s}
+.tm .tdisc{--d:32px; grid-area:i}
+.tm .tn{grid-area:n; font:800 16px/1.1 var(--display)}
+.tm .tn small{display:block; font:800 11.5px var(--body); color:var(--muted)}
+.tm .ts{grid-area:s; font:800 26px/1.1 var(--display); color:color-mix(in srgb,var(--tc) 78%,#1B2A5E); font-variant-numeric:tabular-nums}
+.tm .tl{grid-area:l; font:700 12.5px/1.3 var(--body); color:var(--muted)}
+.tm.mine{background:linear-gradient(color-mix(in srgb,var(--tc) 20%,#fff),color-mix(in srgb,var(--tc) 8%,#fff)); box-shadow:0 4px 0 color-mix(in srgb,var(--tc) 55%,#fff), 0 0 0 3px var(--tc)}
+.tm.lead::after{content:"En tête"; position:absolute; top:-11px; right:10px; padding:1px 9px 2px; border-radius:99px; background:var(--gold); border:2px solid var(--ink); font:800 11px var(--body); color:var(--ink)}
+button.tm{cursor:pointer}
+button.tm:hover{transform:translateY(-2px)}
+button.tm.on{outline:3px solid var(--tc); outline-offset:3px}
+#cq-pick{padding-top:18px}
+#cq-pick h2{margin:0 0 2px}
+.cq-busy{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; background:linear-gradient(#3F7CF0,#2358C8); color:#fff; border-color:#fff}
+.cq-busy p{margin:0; flex:1; min-width:180px; font:800 16px/1.25 var(--display); text-shadow:0 1px 0 rgba(10,25,80,.5)}
+.cq-main{display:flex; flex-direction:column; gap:24px}
+@media (min-width:960px){ .cq-main{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:28px; align-items:start} #cq-zone{position:sticky; top:16px} }
+.cq-mapcard{padding:18px 14px 14px}
+.cq-map{display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); grid-template-rows:repeat(10,minmax(0,1fr)); aspect-ratio:1; gap:5px; padding:6px; background:#D3E3FC; border-radius:18px}
+.zone{appearance:none; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; min-height:0; padding:3px 2px; margin:0; overflow:hidden; cursor:pointer;
+  grid-column:calc(var(--x) + 1) / span var(--w); grid-row:calc(var(--y) + 1) / span var(--h);
+  font-family:var(--display); color:#fff; text-shadow:0 1px 0 rgba(10,25,80,.5); background:linear-gradient(color-mix(in srgb,var(--tc) 80%,#fff),var(--tc));
+  border:3px solid #fff; border-radius:13px; box-shadow:0 3px 0 color-mix(in srgb,var(--tc) 55%,#0a1a50); transition:transform .1s, box-shadow .1s}
+.zone[data-o="air"]{color:var(--ink); text-shadow:none}
+.zone[data-o=""]{--tc:#DCE8FA; color:var(--muted); text-shadow:none; background:#E7F0FD; border-style:dashed; box-shadow:0 3px 0 #B4CBF0}
+.zone:hover{transform:translateY(-1px)}
+.zone .zw{position:absolute; right:-6%; bottom:-8%; width:62%; height:62%; opacity:.2; pointer-events:none}
+.zone .zn{position:relative; font:800 clamp(9px,2.2vw,12px)/1.05 var(--display); text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.zone .zy{position:relative; font:800 clamp(12px,3.4vw,19px)/1 var(--display); font-variant-numeric:tabular-nums}
+.zone .zp{position:relative; display:flex; gap:2px}
+.zone .zp i{width:6px; height:6px; border-radius:50%; border:1.5px solid currentColor}
+.zone .zp i.on{background:currentColor}
+.zone.sel{z-index:2; box-shadow:0 0 0 3px var(--ink), 0 0 0 6px var(--gold)}
+.zone.atk::before{content:""; position:absolute; inset:2px; border:2.5px solid rgba(255,255,255,.95); border-radius:9px; pointer-events:none; animation:zpulse 1.6s ease-in-out infinite}
+.zone[data-o=""].atk::before{border-color:var(--accent)}
+.zone[data-o="air"].atk::before{border-color:var(--ink)}
+.zone .za{position:absolute; top:3px; left:3px; width:14px; height:14px; opacity:.95}
+@keyframes zpulse{50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){ .zone.atk::before{animation:none} }
+.cq-maphint{margin:10px 6px 0}
+.cq-panel{padding:18px; display:flex; flex-direction:column; gap:10px}
+.cq-panel h3{margin:0; font:800 24px/1.1 var(--display)}
+.zown{display:flex; align-items:center; gap:8px; margin:0; font:800 15px var(--body)}
+.zgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:2px 0}
+.zgrid > div{background:#E3EEFF; border-radius:12px; padding:8px 12px}
+.zgrid dt{font:700 12px var(--body); color:var(--muted)}
+.zgrid dd{margin:2px 0 0; font:800 18px/1.2 var(--display); display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+.zgrid .wide{grid-column:1 / -1}
+.ht{width:20px; height:20px; fill:#E5383B; stroke:#E5383B; stroke-width:2; stroke-linejoin:round}
+.ht.off{fill:none; opacity:.55}
+.zai{display:flex; align-items:center; gap:8px; font:800 16px var(--display)}
+.cq-panel .btn{width:100%; font-size:20px}
+.cq-panel .why{margin:0}
+ol.cqlist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+ol.cqlist li{display:flex; align-items:center; gap:10px; padding:7px 12px; background:#fff; border:3px solid #fff; border-radius:14px; box-shadow:0 3px 0 #A9C3EE; font:700 14.5px/1.3 var(--body)}
+ol.cqlist li.me{background:#D6E6FF}
+ol.cqlist .tdisc{--d:26px; border-width:2px}
+ol.cqlist .ev{flex:1; min-width:0}
+ol.cqlist time{flex:none; font:700 12.5px var(--body); color:var(--muted)}
+ol.cqlist .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:800 15px var(--display)}
+ol.cqlist .sc{flex:none; font:700 13px var(--body); color:var(--muted)}
+ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
+.hist li{flex-wrap:wrap}
+.hist .hs{flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px; padding-left:36px}
+.hist .chip{box-shadow:none}
+#cq-rules{padding:12px 16px}
+#cq-rules summary{font:800 16px var(--display)}
+#cq-rules .steps{list-style:none; counter-reset:s; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:10px}
+#cq-rules .steps li{counter-increment:s; position:relative; padding-left:38px; min-height:28px; font-weight:600; line-height:1.4}
+#cq-rules .steps li::before{content:counter(s); position:absolute; left:0; top:-1px; width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:var(--accent); color:#fff; font:800 15px var(--display)}
+#cq-rules b{font-weight:800}
+
+/* un combat de conquête */
+.cqbar{display:flex; align-items:center; gap:12px; padding:10px 14px; background:linear-gradient(#FF8A4C,#E5482A); color:#fff; border:3px solid #fff; border-radius:16px; box-shadow:0 4px 0 rgba(143,36,16,.45); text-shadow:0 1px 0 rgba(90,20,5,.5)}
+.cqbar .tdisc{--d:38px}
+.cqb-t{flex:1; min-width:0; display:flex; flex-direction:column}
+.cqb-t b{font:800 18px/1.15 var(--display)}
+.cqb-t span{font:700 13px/1.3 var(--body)}
+.cqbar .ht{fill:#fff; stroke:#fff; width:18px; height:18px}
+.cqbar .ht.off{fill:none}
+.cqbar .hp{display:flex; gap:2px; flex:none}
+.cqres{font:800 17px/1.3 var(--display)}
+#cqagain{display:none}
+#cqagain.on{display:inline-block}
+
+@media (min-width:960px){
+  #lobby{grid-template-areas:"me me" "conq conq" "left right" "rules rules"}
+  #ccard{grid-area:conq}
+  .cqc{grid-template-columns:150px minmax(0,1fr)} .mm{width:150px; height:150px}
+}
 </style>
 </head>
 <body>
@@ -583,6 +704,19 @@ details.more > :not(summary){margin-top:10px}
         </div>
         <p class="note err" id="rerr"></p>
       </details>
+    </div>
+
+    <div class="card major cq-card" id="ccard" hidden>
+      <h2>Conquête</h2>
+      <div class="cqc">
+        <span id="cqc-map"></span>
+        <div class="cqc-main">
+          <p class="cqc-lead" id="cqc-lead"></p>
+          <div class="cqc-chips" id="cqc-chips"></div>
+          <p class="note" id="cqc-sub"></p>
+          <button class="btn" id="cq-go" type="button">Rejoindre la bataille</button>
+        </div>
+      </div>
     </div>
 
     <div class="colR">
@@ -674,6 +808,7 @@ details.more > :not(summary){margin-top:10px}
 
   <section id="game" class="stack" hidden>
     <div class="ginfo">
+    <div class="cqbar" id="cqbar" hidden><span id="cqb-icon"></span><div class="cqb-t"><b id="cqb-name"></b><span id="cqb-sub"></span></div><span class="hp" id="cqb-hp"></span></div>
     <div class="players" id="players"></div>
     <p class="status" id="status" aria-live="polite"></p>
     <p class="timer" id="timer" hidden></p>
@@ -705,12 +840,61 @@ details.more > :not(summary){margin-top:10px}
     </div>
     <div class="board" id="board" data-turn="0"></div>
     <div class="foot">
+      <button class="btn" id="cqagain" type="button">Attaquer à nouveau</button>
       <button class="btn" id="rematch" hidden>Revanche</button>
       <button class="btn ghost" id="kick" hidden></button>
       <button class="btn ghost" id="resign" hidden>Abandonner</button>
       <button class="btn ghost" id="leaveroom" hidden>Quitter la salle</button>
       <button class="btn ghost" id="leave">Retour à mes parties</button>
     </div>
+  </section>
+
+  <section id="conquest" hidden>
+    <div class="cq-head">
+      <button class="btn ghost small" id="cq-back" type="button">← Accueil</button>
+      <div class="cq-title"><h2>Conquête</h2><p class="note" id="cq-season"></p></div>
+    </div>
+    <div class="card cq-busy" id="cq-busy" hidden>
+      <p id="cq-busy-t"></p>
+      <button class="btn small" id="cq-resume" type="button">Reprendre</button>
+    </div>
+    <div class="cq-teams" id="cq-teams"></div>
+    <div class="card stack" id="cq-pick" hidden>
+      <h2 id="cq-pick-t"></h2>
+      <p class="note" id="cq-pick-n"></p>
+      <div class="row">
+        <button class="btn" id="cq-pick-ok" type="button" hidden></button>
+        <button class="btn ghost" id="cq-pick-no" type="button" hidden>Changer d’avis</button>
+      </div>
+    </div>
+    <div class="cq-main">
+      <div class="card cq-mapcard"><div class="cq-map" id="cq-map"></div><p class="note cq-maphint" id="cq-maphint"></p></div>
+      <div class="card cq-panel" id="cq-zone" aria-live="polite"></div>
+    </div>
+    <div class="card major stack">
+      <h2>Journal</h2>
+      <ol class="cqlist" id="cq-log"></ol>
+      <p class="note" id="cq-log-empty">Rien pour l’instant. La première capture de la semaine sera ici.</p>
+    </div>
+    <div class="card major stack">
+      <h2>Meilleurs combattants</h2>
+      <ol class="cqlist" id="cq-top"></ol>
+      <p class="note" id="cq-top-empty">Personne n’a encore gagné de combat cette semaine.</p>
+    </div>
+    <div class="card major stack" id="cq-hist-card" hidden>
+      <h2>Saisons passées</h2>
+      <ol class="cqlist hist" id="cq-hist"></ol>
+    </div>
+    <details id="cq-rules">
+      <summary>Comment ça marche</summary>
+      <ol class="steps">
+        <li><b>Choisis ton camp</b> pour la semaine : eau, feu, air ou terre. Tu ne peux pas en changer avant lundi.</li>
+        <li><b>Attaque une zone</b> qui touche une zone de ton camp. Tu joues une partie contre l’IA qui la défend : plus la zone est grande, plus l’IA est forte.</li>
+        <li><b>Chaque victoire retire 1 point de vie</b> à la zone. À zéro, elle passe à ton camp avec tous ses points de vie, et ton camp touche un bonus de capture (6 heures de production). Perdre un combat ne coûte rien.</li>
+        <li><b>Chaque heure</b>, une zone rapporte à son camp (a + b) + (a × b) points, où a × b est la taille de sa grille.</li>
+        <li><b>Lundi à minuit</b>, la saison se termine : le camp qui a le plus de points gagne, et la carte repart de zéro.</li>
+      </ol>
+    </details>
   </section>
 
   <p class="toast" id="toast" role="status" aria-live="polite"></p>
@@ -816,15 +1000,15 @@ const Net=(()=>{
 })();
 
 /* ---------- état de l'interface ---------- */
-let online=false, mode='lobby', code=null, remote=null, me=-1, anim=false, failed=false, n=0, np=2, skew=0, turnSince=Date.now();
+let online=false, mode='lobby', code=null, remote=null, me=-1, anim=false, failed=false, n=0, hh=0, np=2, skew=0, turnSince=Date.now();
 let view={seq:-1,o:null,c:null,turn:0,winner:-1};
 const boardEl=$('#board');
 
 let toastT;
 function toast(msg){ $('#toast').textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').textContent=''; },6000); }
-const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.',not_full:'En équipes, toutes les places doivent être prises : complète avec des IA.',too_many_players:'Retire d’abord des joueurs pour réduire le nombre de places.'};
+const ERRS={not_found:'Code introuvable. Vérifie les 4 caractères.',too_many:'Tu as déjà 12 parties en cours : termines-en une avant d’en commencer une autre.',full:'Le serveur est plein, réessaie plus tard.',rate:'Doucement : trop de requêtes d’un coup.',auth:'Compte non reconnu.',not_your_turn:'Ce n’est pas ton tour.',invalid_move:'Coup impossible.',forbidden:'Action impossible pour le moment.',too_soon:'Il faut attendre un peu avant de pouvoir faire ça.',not_enough:'Il faut au moins 2 joueurs.',not_full:'En équipes, toutes les places doivent être prises : complète avec des IA.',too_many_players:'Retire d’abord des joueurs pour réduire le nombre de places.',no_team:'Choisis d’abord ton camp.',busy:'Tu as déjà un combat en cours : termine-le avant d’en lancer un autre.',own:'Cette zone est déjà à ton camp.',far:'Trop loin : une zone doit toucher une zone de ton camp pour être attaquée.',locked:'Tu as déjà choisi ton camp pour cette saison.'};
 const errMsg=e=>ERRS[e&&e.code]||'Connexion impossible, réessaie dans un instant.';
-const show=screen=>{ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; updateTitle(); };
+const show=screen=>{ $('#lobby').hidden=screen!=='lobby'; $('#game').hidden=screen!=='game'; $('#conquest').hidden=screen!=='conquest'; updateTitle(); };
 const setHash=v=>{ try{ if(v) location.hash=v; else if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
 const now=()=>Date.now()+skew;
 function fmtLeft(ms){
@@ -926,11 +1110,11 @@ $('#snd').addEventListener('click',()=>{ Sfx.set(!Sfx.on); syncSnd(); if(Sfx.on)
 document.addEventListener('pointerdown',e=>{ Sfx.unlock(); if(e.target.closest('.btn,.gitem,summary')) Sfx.click(); },{capture:true});
 
 /* ---------- plateau ---------- */
-function buildBoard(size){
-  n=size;
+function buildBoard(size,rows){
+  n=size; hh=rows||size;
   boardEl.style.setProperty('--n',n);
   let h='';
-  for(let i=0;i<n*n;i++) h+=`<button class="cell" data-i="${i}" data-o="" disabled><i></i><i></i><i></i><i></i></button>`;
+  for(let i=0;i<n*hh;i++) h+=`<button class="cell" data-i="${i}" data-o="" disabled><i></i><i></i><i></i><i></i></button>`;
   boardEl.innerHTML=h;
 }
 let popK=0;
@@ -949,7 +1133,7 @@ function paint(st,got){
   const cells=boardEl.children, g=new Set(got||[]), dead=st.dead||0, nn=n;
   for(let i=0;i<cells.length;i++){
     const el=cells[i], c=st.c[i], o=st.o[i], k=Math.min(c,4);
-    const rg=dead||sdOn?ring(nn,i):9;
+    const rg=dead||sdOn?ring(nn,i,hh):9;
     el.classList.toggle('void',rg<dead);
     el.classList.toggle('doom',sdOn&&rg===dead);
     el.classList.toggle('soon',sdOn&&sdSoon&&rg===dead);
@@ -996,7 +1180,7 @@ function setView(v){
   if(mode==='online'&&remote&&me>=0&&remote.status==='playing'&&view.o&&v.winner<0&&v.turn===me&&view.turn!==me) Sfx.turn();
   if(view.o&&(v.dead||0)>(view.dead||0)) toast('Mort subite : le bord de la grille a disparu !');
   const left=suddenLeft(v.round||0);
-  sdOn=!!v.sudden&&v.winner<0&&(v.dead||0)<maxDead(v.n||n)&&left<=SUDDEN_EVERY; sdSoon=left<=1;      // l'anneau n'est signalé que dans les 5 derniers tours
+  sdOn=!!v.sudden&&v.winner<0&&(v.dead||0)<maxDead(v.n||n,hh)&&left<=SUDDEN_EVERY; sdSoon=left<=1;      // l'anneau n'est signalé que dans les 5 derniers tours
   view=v; paint(v,[]); renderMeta();
 }
 function resetView(){ view={seq:-1,o:null,c:null,turn:0,winner:-1}; sdOn=false; }
@@ -1061,12 +1245,14 @@ function renderMeta(){
     el.querySelector('.nm').textContent=names[i]+(isOnline&&me===i?' (toi)':'');
     const rt=el.querySelector('.rt'); rt.textContent='';
     if(isOnline&&remote.seats[i].filled&&remote.seats[i].rating!=null) rankBadge(rt,remote.seats[i].rating);
+    else if(isOnline&&remote.cq&&remote.seats[i].filled){ const e=remote.seats[i].el; rt.innerHTML=e?`${tdisc(e,20)}<span class="rn">Camp ${TEAM_LABEL[e]}</span>`:'<span class="rn">Zone libre</span>'; rt.style.display='flex'; rt.style.alignItems='center'; rt.style.gap='6px'; }
   });
+  syncCqLook();
   let s;
   const iAmOut=isOnline&&me>=0&&!waiting&&t[me].cells===0;
   if(waiting) s=`Salle d’attente : ${joined} / ${np} places prises.`;
   else if(over){
-    if(isOnline&&me>=0) s=resultLine(names)||(view.winner===me?'Tu as gagné la partie.':`${names[view.winner]} a gagné la partie.`);
+    if(isOnline&&me>=0) s=(remote.cq&&cqResultLine())||resultLine(names)||(view.winner===me?'Tu as gagné la partie.':`${names[view.winner]} a gagné la partie.`);
     else if(isOnline&&remote.teams) s=`L’équipe ${LETTERS[view.winner%remote.teams]} gagne la partie.`;
     else s=`${names[view.winner]} gagne la partie.`;
   }
@@ -1086,7 +1272,8 @@ function renderMeta(){
   if(over) maybeRitual();
   $('#leaveroom').hidden=!(waiting&&me>=0);
   if(waiting) renderRoom();
-  $('#rematch').hidden=!over||(isOnline&&me<0);
+  $('#rematch').hidden=!over||(isOnline&&me<0)||!!(isOnline&&remote.cq);
+  { const c=isOnline&&remote.cq, r=c&&c.result; $('#cqagain').classList.toggle('on',!!(over&&c&&me>=0&&r&&(r.kind==='lost'||r.kind==='hit')&&c.owner!==c.team)); $('#leave').textContent=c?'Retour à la carte':'Retour à mes parties'; }
   $('#resign').hidden=!(isOnline&&!over&&!waiting&&me>=0&&!iAmOut);
   if($('#resign').hidden) resetResign();
   boardEl.dataset.turn=over?String(view.winner):String(view.turn);
@@ -1118,8 +1305,8 @@ setInterval(()=>{ updateKick(); updateTimer(); },1000);
 async function play(i){
   if(!canPlay(i)) return;
   const p=mode==='local'?view.turn:me;
-  const r=step({n,o:view.o,c:view.c,np,dead:view.dead||0},i,p,teamArr(),!!view.sudden,view.round||0);
-  const nv={o:r.o,c:r.c,turn:r.winner>=0?p:nextTurn(r.o,r.c,p,np),winner:r.winner,seq:view.seq+1,sudden:view.sudden,dead:r.dead,round:r.round,n};
+  const r=step({n,h:hh,o:view.o,c:view.c,np,dead:view.dead||0},i,p,teamArr(),!!view.sudden,view.round||0);
+  const nv={o:r.o,c:r.c,turn:r.winner>=0?p:nextTurn(r.o,r.c,p,np),winner:r.winner,seq:view.seq+1,sudden:view.sudden,dead:r.dead,round:r.round,n,h:hh};
   failed=false;
   playFrames(r.frames,()=>{
     if(failed){ failed=false; resync(); return; }
@@ -1141,11 +1328,11 @@ boardEl.addEventListener('click',e=>{
 function applyRemote(){
   const d=remote; if(!d) return;
   np=d.np;
-  if(!boardEl.children.length||n!==d.n){ buildBoard(d.n); resetView(); }
+  if(!boardEl.children.length||n!==d.n||hh!==(d.h||d.n)){ buildBoard(d.n,d.h); resetView(); }
   if(d.seq>view.seq){
-    const nv={o:d.o,c:d.c,turn:d.turn,winner:d.status==='done'?d.winner:-1,seq:d.seq,sudden:!!d.sudden,dead:d.dead||0,round:d.round||0,n:d.n};
+    const nv={o:d.o,c:d.c,turn:d.turn,winner:d.status==='done'?d.winner:-1,seq:d.seq,sudden:!!d.sudden,dead:d.dead||0,round:d.round||0,n:d.n,h:d.h||d.n};
     if(d.last&&view.o&&d.seq===view.seq+1){
-      const r=simulate({n:d.n,o:view.o,c:view.c,dead:view.dead||0,shrinkTo:d.dead||0},d.last.i,d.last.p,teamArr());
+      const r=simulate({n:d.n,h:d.h||d.n,o:view.o,c:view.c,dead:view.dead||0,shrinkTo:d.dead||0},d.last.i,d.last.p,teamArr());
       playFrames(r.frames,()=>{ if(mode!=='online'||!remote) return; setView(nv); if(remote.seq>view.seq) applyRemote(); });
     } else setView(nv);
   } else renderMeta();
@@ -1158,7 +1345,7 @@ Net.on('game',m=>{
   if(anim) renderMeta(); else applyRemote();
 });
 function enterGame(c){
-  code=c; mode='online'; remote=null; me=-1; resetView(); anim=false;
+  code=c; mode='online'; remote=null; me=-1; resetView(); anim=false; clearCqLook(); $('#cqagain').classList.remove('on'); ss.del('propagation:screen');
   ss.set('propagation:game',c); setHash(c);
   boardEl.innerHTML=''; n=0;
   show('game');
@@ -1293,9 +1480,11 @@ function startLocal(){
   setView({o:b.o,c:b.c,turn:rnd(np),winner:-1,seq:0,n:b.n,np,sudden:np>4&&$('#sudden').checked,dead:0,round:0});
 }
 function leave(){
+  const back=!!(remote&&remote.cq);          // un combat de conquête ramène à la carte
   if(code) Net.unsub(code);
-  mode='lobby'; remote=null; code=null; me=-1; anim=false; resetView();
+  mode='lobby'; remote=null; code=null; me=-1; anim=false; resetView(); clearCqLook(); $('#cqagain').classList.remove('on');
   ss.del('propagation:game'); setHash('');
+  if(back){ openConquest(); return; }
   show('lobby'); loadLobby();
 }
 
@@ -1328,8 +1517,8 @@ function renderGames(list,skewNow){
     const b=document.createElement('button'); b.className='gitem'+(mineTurn?' mine':''); b.style.setProperty('--pc',`var(--p${Math.max(0,s.me)})`);
     b.innerHTML=`<span class="sw" data-sh="${Math.max(0,s.me)}"></span><span class="gi"><span class="g1"></span><span class="g2"></span><span class="g3"></span></span>`;
     const kind=s.status==='waiting'?'Salle':(s.ai&&s.humans<=1)?'Contre l’IA':s.teams?'Par équipes':s.mode==='long'?'Longue durée':'Rapide';
-    b.querySelector('.g1').textContent=`Partie ${s.code} · ${kind}${s.ai&&s.humans>1?' + IA':''}`;
-    b.querySelector('.g3').textContent=`${s.np} joueurs · ${s.n}×${s.n}`;
+    b.querySelector('.g1').textContent=s.cq?`Conquête · ${s.cq.name}`:`Partie ${s.code} · ${kind}${s.ai&&s.humans>1?' + IA':''}`;
+    b.querySelector('.g3').textContent=s.cq?`Camp ${TEAM_LABEL[s.cq.team]} · grille ${s.n}×${s.h||s.n}`:`${s.np} joueurs · ${s.n}×${s.h||s.n}`;
     const left=s.deadline?fmtLeft(s.deadline-(Date.now()+skewNow)):'';
     let t;
     if(s.status==='waiting') t=`Salle d’attente · ${s.filled}/${s.np} places prises`;
@@ -1347,7 +1536,7 @@ async function loadLobby(){
   try{
     const r=await Net.call('mygames'); renderProfile(r.profile); renderGames(r.games,r.now-Date.now());
   }catch(e){ if(e.code!=='unavailable') toast(errMsg(e)); }
-  loadTop(); loadRooms();
+  loadTop(); loadRooms(); loadConquest();
 }
 /* ---------- rituel de fin de partie classée ---------- */
 const RITUAL_KEY='propagation:rituals';
@@ -1628,8 +1817,236 @@ $('#copy').addEventListener('click',async()=>{
   }
 });
 
+/* ---------- conquête ---------- */
+const TEAMS=['eau','feu','air','terre'];
+const TEAM_LABEL={eau:'Eau',feu:'Feu',air:'Air',terre:'Terre'};
+const TEAM_COL={eau:'#2B7BFF',feu:'#F0502D',air:'#F5B517',terre:'#2DAA64'};
+const GARRISON_COL='#6B7A99';
+const TI_PATH={
+  eau:'<path d="M12 2.6c3.9 4.7 6.2 7.7 6.2 10.8a6.2 6.2 0 0 1-12.4 0C5.8 10.3 8.1 7.3 12 2.6z"/>',
+  feu:'<path fill-rule="evenodd" d="M12.4 1.8c.6 3.6 5.6 6 5.6 12.2a6 6 0 0 1-12 0c0-2.6 1.2-4.4 2.6-5.8.2 1.8.9 2.8 1.9 3.3-.6-3.5-.2-6.9 1.9-9.7zM12 20.4a2.9 2.9 0 0 0 2.9-2.9c0-1.8-1.4-2.8-2.9-4.8-1.5 2-2.9 3-2.9 4.8a2.9 2.9 0 0 0 2.9 2.9z"/>',
+  terre:'<path d="M1.5 20.5 9 6.5l4.3 7 2.6-3.8 6.6 10.8z"/>'
+};
+function teamIcon(t,px){
+  const s=px||20;
+  if(t==='air') return `<svg class="ti" viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h10.5a2.8 2.8 0 1 0-2.8-2.8"/><path d="M3 14h14.5a2.8 2.8 0 1 1-2.8 2.8"/><path d="M3 19h6"/></svg>`;
+  return `<svg class="ti" viewBox="0 0 24 24" width="${s}" height="${s}" fill="currentColor" aria-hidden="true">${TI_PATH[t]||''}</svg>`;
+}
+const tdisc=(t,d)=>{ d=d||34; return `<span class="tdisc" data-t="${t}" style="--tc:${TEAM_COL[t]};--d:${d}px" title="${TEAM_LABEL[t]}">${teamIcon(t,Math.round(d*.56))}</span>`; };
+const HEART='<path d="M12 21s-8-5.2-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.8-8 11-8 11z"/>';
+const hearts=(hp,max)=>Array.from({length:max},(_,i)=>`<svg class="ht${i<hp?'':' off'}" viewBox="0 0 24 24" aria-hidden="true">${HEART}</svg>`).join('');
+const fmtPts=v=>Number(v).toLocaleString('fr-FR');
+const plural=(k,w)=>`${k} ${w}${k>1?'s':''}`;
+function ago(ms){ const m=Math.floor(ms/60000); if(m<1) return 'à l’instant'; if(m<60) return `il y a ${m} min`; const h=Math.floor(m/60); if(h<24) return `il y a ${h} h`; return `il y a ${Math.floor(h/24)} j`; }
+const dayFmt=ts=>{ const d=new Date(ts), m=d.toLocaleDateString('fr-FR',{month:'long'}); return `${d.getDate()===1?'1er':d.getDate()} ${m}`; };
+
+let cq=null, cqSel=null, cqPick=null, cqSkew=0;
+const cqNow=()=>Date.now()+cqSkew;
+const zoneById=id=>cq&&cq.zones.find(z=>z.id===id);
+async function loadConquest(){
+  if(!online) return;
+  try{
+    const r=await Net.call('conq'); cq=r; cqSkew=r.now-Date.now();
+    renderCqCard(); if(mode==='conquest') renderConquest();
+  }catch(e){ if(e&&e.code!=='unavailable') toast(errMsg(e)); }
+}
+/* accueil : une petite carte et l'état de la saison */
+function miniMap(zones){
+  let s='<svg viewBox="0 0 100 100" class="mm" role="img" aria-label="Carte de la conquête">';
+  for(const z of zones) s+=`<rect x="${z.x*10+1.2}" y="${z.y*10+1.2}" width="${z.w*10-2.4}" height="${z.h*10-2.4}" rx="3" fill="${z.owner?TEAM_COL[z.owner]:'#E7F0FD'}"${z.owner?'':' stroke="#B4CBF0" stroke-width="1" stroke-dasharray="3 2"'}/>`;
+  return s+'</svg>';
+}
+function renderCqCard(){
+  const card=$('#ccard'); if(!cq){ card.hidden=true; return; }
+  card.hidden=false;
+  $('#cqc-map').innerHTML=miniMap(cq.zones);
+  const best=Math.max(...TEAMS.map(t=>cq.scores[t])), leaders=TEAMS.filter(t=>cq.scores[t]===best);
+  $('#cqc-lead').textContent=best>0&&leaders.length===1?`Le camp ${TEAM_LABEL[leaders[0]]} mène avec ${fmtPts(best)} points.`:'La saison vient de commencer : tout est à jouer.';
+  const chips=$('#cqc-chips'); chips.textContent='';
+  for(const t of TEAMS){ const c=document.createElement('span'); c.className='chip'+(cq.me&&cq.me.team===t?' mine':''); c.style.setProperty('--tc',TEAM_COL[t]); c.innerHTML=tdisc(t,22)+`<span>${fmtPts(cq.scores[t])}</span>`; c.title=TEAM_LABEL[t]; chips.append(c); }
+  const left=fmtLeft(cq.season.end-cqNow());
+  $('#cqc-sub').textContent=(cq.me?`Tu es du camp ${TEAM_LABEL[cq.me.team]}.`:'Choisis ton camp : eau, feu, air ou terre.')+` La saison se termine dans ${left}.`+(cq.busy?' Un combat t’attend.':'');
+  $('#cq-go').textContent=cq.busy?'Reprendre la bataille':cq.me?'Aller sur la carte':'Rejoindre la bataille';
+}
+/* l'écran de conquête */
+function openConquest(){
+  if(code) Net.unsub(code);
+  mode='conquest'; remote=null; code=null; me=-1; anim=false; resetView(); clearCqLook();
+  ss.del('propagation:game'); ss.set('propagation:screen','conquest'); setHash('conquete');
+  show('conquest'); window.scrollTo(0,0);
+  if(cq) renderConquest();
+  loadConquest();
+}
+function closeConquest(){
+  mode='lobby'; ss.del('propagation:screen'); setHash('');
+  show('lobby'); loadLobby();
+}
+function renderConquest(){
+  const s=cq.season;
+  $('#cq-season').textContent=`Semaine du ${dayFmt(s.start)} au ${dayFmt(s.end-1)} · il reste ${fmtLeft(s.end-cqNow())}`;
+  const busy=$('#cq-busy');
+  busy.hidden=!cq.busy;
+  if(cq.busy){ const z=zoneById(cq.busy.zone); $('#cq-busy-t').textContent=`Combat en cours : ${z?z.name:'une zone'}`; }
+  renderTeams(); renderPick(); renderMap(); renderPanel(); renderLog(); renderTopCq(); renderHist();
+}
+function renderTeams(){
+  const box=$('#cq-teams'); box.textContent='';
+  const lead=Math.max(...TEAMS.map(t=>cq.scores[t]));
+  for(const t of TEAMS){
+    const mine=!!cq.me&&cq.me.team===t, pick=!cq.me;
+    const el=document.createElement(pick?'button':'div');
+    el.className='tm'+(mine?' mine':'')+(lead>0&&cq.scores[t]===lead?' lead':'')+(pick&&cqPick===t?' on':'');
+    if(pick){ el.type='button'; el.dataset.t=t; el.setAttribute('aria-pressed',String(cqPick===t)); }
+    el.style.setProperty('--tc',TEAM_COL[t]);
+    el.innerHTML=`${tdisc(t,32)}<span class="tn"></span><b class="ts"></b><span class="tl"></span>`;
+    el.querySelector('.tn').innerHTML=`${TEAM_LABEL[t]}${mine?'<small>ton camp</small>':''}`;
+    el.querySelector('.ts').textContent=fmtPts(cq.scores[t]);
+    el.querySelector('.tl').textContent=`${plural(cq.counts[t],'zone')} · +${fmtPts(cq.rate[t])} pts/h · ${plural(cq.members[t],'joueur')}`;
+    if(pick) el.addEventListener('click',()=>{ cqPick=cqPick===t?null:t; renderTeams(); renderPick(); });
+    box.append(el);
+  }
+}
+function renderPick(){
+  const box=$('#cq-pick'); box.hidden=!!cq.me; if(cq.me) return;
+  const min=Math.min(...TEAMS.map(t=>cq.members[t])), few=TEAMS.filter(t=>cq.members[t]===min);
+  $('#cq-pick-t').textContent=cqPick?`Rejoindre le camp ${TEAM_LABEL[cqPick]} ?`:'Choisis ton camp';
+  $('#cq-pick-n').textContent=cqPick
+    ?`Tu défends ses couleurs jusqu’à la fin de la saison (lundi, minuit). Tu ne pourras pas en changer avant.`
+    :`Touche l’un des quatre camps ci-dessus. Ton choix vaut jusqu’à la fin de la semaine.${few.length<4?` Le camp le moins nombreux : ${few.map(t=>TEAM_LABEL[t]).join(', ')}.`:''}`;
+  $('#cq-pick-ok').hidden=!cqPick; $('#cq-pick-no').hidden=!cqPick;
+  if(cqPick) $('#cq-pick-ok').textContent=`Rejoindre le camp ${TEAM_LABEL[cqPick]}`;
+}
+$('#cq-pick-no').addEventListener('click',()=>{ cqPick=null; renderTeams(); renderPick(); });
+$('#cq-pick-ok').addEventListener('click',async()=>{
+  const t=cqPick; if(!t) return; $('#cq-pick-ok').disabled=true;
+  try{ await Net.call('conqteam',{team:t}); cqPick=null; await loadConquest(); }
+  catch(e){ toast(errMsg(e)); loadConquest(); }
+  $('#cq-pick-ok').disabled=false;
+});
+function renderMap(){
+  const box=$('#cq-map'); box.textContent='';
+  for(const z of cq.zones){
+    const b=document.createElement('button'); b.type='button';
+    const atk=!!cq.me&&z.why===null;
+    b.className='zone'+(atk?' atk':'')+(cqSel===z.id?' sel':'');
+    b.dataset.id=z.id; b.dataset.o=z.owner||'';
+    b.style.cssText=`--x:${z.x};--y:${z.y};--w:${z.w};--h:${z.h};--tc:${z.owner?TEAM_COL[z.owner]:'#DCE8FA'}`;
+    const total=z.owner?z.maxHp:z.hp;
+    b.innerHTML=`${z.owner?`<span class="zw">${teamIcon(z.owner,40)}</span>`:''}<span class="zn"></span><span class="zy">+${z.income}</span><span class="zp">${Array.from({length:total},(_,i)=>`<i class="${i<z.hp?'on':''}"></i>`).join('')}</span>`;
+    b.querySelector('.zn').textContent=z.name;
+    b.setAttribute('aria-label',`${z.name}, grille ${z.a} sur ${z.b}, ${z.owner?'camp '+TEAM_LABEL[z.owner]:'zone libre'}, ${z.hp} point${z.hp>1?'s':''} de vie, rapporte ${z.income} points par heure${atk?', attaquable':''}`);
+    b.addEventListener('click',()=>{ cqSel=z.id; renderMap(); renderPanel(); if(matchMedia('(max-width:959px)').matches) $('#cq-zone').scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'nearest'}); });
+    box.append(b);
+  }
+  $('#cq-maphint').textContent=cq.me?'Les zones entourées d’un trait clignotant sont à ta portée : elles touchent une zone de ton camp.':'Touche une zone pour voir ses détails.';
+}
+const WHY={
+  noteam:'Choisis d’abord ton camp pour pouvoir attaquer.',
+  own:'Cette zone est déjà à ton camp. Défends-la en attaquant les zones voisines.',
+  far:'Trop loin : tu peux attaquer une zone seulement si elle touche une zone de ton camp.'
+};
+function renderPanel(){
+  const box=$('#cq-zone'), z=zoneById(cqSel);
+  if(!z){ box.innerHTML='<h3>Une zone ?</h3><p class="note">Touche une zone sur la carte : tu vois ce qu’elle rapporte, sa défense, ses points de vie, et tu peux l’attaquer.</p>'; return; }
+  const total=z.owner?z.maxHp:z.hp;
+  box.innerHTML=`<h3></h3><p class="zown"></p>
+    <dl class="zgrid">
+      <div><dt>Grille du combat</dt><dd>${z.a} × ${z.b}</dd></div>
+      <div><dt>Production</dt><dd>+${fmtPts(z.income)} pts/h</dd></div>
+      <div><dt>Points de vie</dt><dd>${hearts(z.hp,total)}</dd></div>
+      <div><dt>Bonus de capture</dt><dd>+${fmtPts(z.bonus)} pts</dd></div>
+      <div class="wide"><dt>${z.owner?'Défense de la zone':'Garnison de la zone'}</dt><dd class="zai"></dd></div>
+    </dl>
+    <p class="note why"></p>
+    <button class="btn" id="cq-atk" type="button"></button>`;
+  box.querySelector('h3').textContent=z.name;
+  box.querySelector('.zown').innerHTML=z.owner?`${tdisc(z.owner,26)}<span>Camp ${TEAM_LABEL[z.owner]}</span>`:'<span>Zone libre : personne ne la tient.</span>';
+  box.querySelector('.zai').innerHTML=`${emblem(z.ai.elo,34)}<span>IA ${z.ai.name} <small style="color:var(--muted);font-weight:700">· Élo ${z.ai.elo}</small></span>`;
+  const btn=box.querySelector('#cq-atk'), why=box.querySelector('.why');
+  const busyOther=cq.busy&&cq.busy.zone!==z.id, resume=cq.busy&&cq.busy.zone===z.id;
+  let reason=z.why?WHY[z.why]||'':'';
+  if(!reason&&busyOther) reason='Tu as déjà un combat en cours : termine-le avant d’en lancer un autre.';
+  why.textContent=reason||(z.owner?`Chaque victoire retire 1 point de vie. À 0, la zone passe à ton camp.`:'Une seule victoire suffit pour la prendre.');
+  btn.disabled=!!reason;
+  btn.textContent=resume?'Reprendre le combat':reason?'Attaque impossible':`Attaquer`;
+  btn.addEventListener('click',()=>cqAttack(z.id,btn));
+}
+async function cqAttack(id,btn){
+  if(btn) btn.disabled=true;
+  try{ const r=await Net.call('conqatk',{zone:id}); enterGame(r.code); }
+  catch(e){ toast(errMsg(e)); loadConquest(); }
+}
+function evText(e){
+  const z=zoneById(e.zone), nm=z?z.name:'une zone', by=e.by||'Un joueur';
+  if(e.kind==='capture') return `${by} a pris ${nm}${e.prev?` au camp ${TEAM_LABEL[e.prev]}`:''} · +${fmtPts(e.bonus)} pts`;
+  return `${by} a touché ${nm} (${plural(e.hp,'PV')} restant${e.hp>1?'s':''})`;
+}
+function renderLog(){
+  const ol=$('#cq-log'); ol.textContent='';
+  $('#cq-log-empty').hidden=cq.events.length>0;
+  for(const e of cq.events.slice(0,12)){
+    const li=document.createElement('li'); li.innerHTML=`${tdisc(e.team,26)}<span class="ev"></span><time></time>`;
+    li.querySelector('.ev').textContent=evText(e); li.querySelector('time').textContent=ago(cqNow()-e.t); ol.append(li);
+  }
+}
+function renderTopCq(){
+  const ol=$('#cq-top'); ol.textContent='';
+  $('#cq-top-empty').hidden=cq.top.length>0;
+  cq.top.forEach((p,i)=>{
+    const li=document.createElement('li'); if(p.me) li.className='me';
+    li.innerHTML=`<span class="r">${i+1}</span>${tdisc(p.team,26)}<span class="nm"></span><span class="sc"></span>`;
+    li.querySelector('.nm').textContent=p.name;
+    li.querySelector('.sc').textContent=`${plural(p.caps,'capture')} · ${plural(p.hits,'victoire')}`;
+    ol.append(li);
+  });
+}
+function renderHist(){
+  const ol=$('#cq-hist'); ol.textContent=''; $('#cq-hist-card').hidden=!cq.history.length;
+  for(const h of cq.history){
+    const li=document.createElement('li');
+    li.innerHTML=`${h.winner?tdisc(h.winner,26):''}<span class="ev"></span><div class="hs"></div>`;
+    li.querySelector('.ev').textContent=`Semaine du ${dayFmt(h.start)} : ${h.winner?'victoire du camp '+TEAM_LABEL[h.winner]:'égalité'}`;
+    const hs=li.querySelector('.hs');
+    for(const t of TEAMS){ const c=document.createElement('span'); c.className='chip'; c.style.setProperty('--tc',TEAM_COL[t]); c.innerHTML=tdisc(t,22)+`<span>${fmtPts(h.scores[t])}</span>`; hs.append(c); }
+    ol.append(li);
+  }
+}
+$('#cq-go').addEventListener('click',()=>{ if(cq&&cq.busy){ enterGame(cq.busy.code); } else openConquest(); });
+$('#cq-back').addEventListener('click',closeConquest);
+$('#cq-resume').addEventListener('click',()=>{ if(cq&&cq.busy) enterGame(cq.busy.code); });
+setInterval(()=>{ if(mode==='conquest'&&!document.hidden) loadConquest(); },20000);
+setInterval(()=>{ if(cq&&mode==='conquest') $('#cq-season').textContent=`Semaine du ${dayFmt(cq.season.start)} au ${dayFmt(cq.season.end-1)} · il reste ${fmtLeft(cq.season.end-cqNow())}`; },30000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&mode==='conquest') loadConquest(); });
+
+/* combat de conquête : couleurs des camps, bandeau, résultat */
+function clearCqLook(){ const g=$('#game'); g.style.removeProperty('--p0'); g.style.removeProperty('--p1'); $('#cqbar').hidden=true; }
+function syncCqLook(){
+  const c=remote&&remote.cq; if(!c){ clearCqLook(); return; }
+  const g=$('#game');
+  remote.seats.forEach((s,i)=>{ if(i<2) g.style.setProperty('--p'+i,s.el?TEAM_COL[s.el]:GARRISON_COL); });
+  const bar=$('#cqbar'); bar.hidden=false;
+  $('#cqb-icon').innerHTML=tdisc(c.team,38);
+  $('#cqb-name').textContent=`Conquête : ${c.name}`;
+  const lv=((Net.features&&Net.features.bots)||[]).find(b=>b.level===c.lvl);
+  $('#cqb-sub').textContent=`Grille ${c.a} × ${c.b} · ${c.def?'défense du camp '+TEAM_LABEL[c.def]:'garnison libre'}${lv?' · IA '+lv.name:''}`;
+  const res=c.result;
+  $('#cqb-hp').innerHTML=c.hp==null?'':hearts(c.hp,c.owner?c.maxHp:Math.max(c.hp,1));
+  $('#cqb-hp').title=c.hp==null?'':`${c.hp} point${c.hp>1?'s':''} de vie`;
+}
+function cqResultLine(){
+  const c=remote&&remote.cq, r=c&&c.result; if(!r) return '';
+  if(r.kind==='capture') return `Zone prise ! ${c.name} passe au camp ${TEAM_LABEL[c.team]}. +${fmtPts(r.bonus)} points pour ton camp.`;
+  if(r.kind==='hit') return `Victoire : ${c.name} perd 1 point de vie (${r.hp} sur ${r.maxHp}). Encore ${r.hp} victoire${r.hp>1?'s':''} pour la prendre.`;
+  if(r.kind==='lost') return `Défaite : la défense de ${c.name} a tenu bon. Ça ne coûte rien, retente ta chance.`;
+  if(r.kind==='own') return `Victoire, mais ton camp tient déjà ${c.name} : rien ne change.`;
+  if(r.kind==='late') return 'La saison s’est terminée pendant le combat : il ne compte pas.';
+  return '';
+}
+$('#cqagain').addEventListener('click',()=>{ if(remote&&remote.cq) cqAttack(remote.cq.zone,$('#cqagain')); });
+
 /* ---------- démarrage ---------- */
 window.addEventListener('hashchange',()=>{          // un lien collé dans un onglet déjà ouvert
+  if(location.hash==='#conquete'&&online&&mode==='lobby'){ openConquest(); return; }
   const c=(location.hash||'').slice(1).toUpperCase();
   if(/^[A-HJ-NP-Z2-9]{4}$/.test(c)&&online&&mode!=='local'&&!(mode==='online'&&code===c)) joinGame(c,false);
 });
@@ -1648,7 +2065,8 @@ Net.on('state',st=>{
   online=ok; busy(false);
   if(!ok){ $('#net').textContent='Impossible de joindre le serveur de jeu. Recharge la page. Le mode « même écran » fonctionne.'; $('#games').innerHTML='<p class="note">Serveur injoignable.</p>'; return; }
   if(wanted) await joinGame(wanted,true);
-  if(mode==='lobby') loadLobby();
+  if(mode==='lobby'&&(location.hash==='#conquete'||ss.get('propagation:screen')==='conquest')) openConquest();
+  else if(mode==='lobby') loadLobby();
 })();
 })();
 </script>

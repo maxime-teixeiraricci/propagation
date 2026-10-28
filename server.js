@@ -16,6 +16,7 @@ const path = require('path');
 const crypto = require('crypto');
 const E = require('./engine.js');
 const Bot = require('./bot.js');
+const Conq = require('./conquest.js');
 
 const PORT = process.env.PORT || 3000;
 const TEST = process.env.PROPAGATION_TEST === '1';          // autorise des délais très courts (tests)
@@ -128,6 +129,49 @@ async function flush() {
 }
 const durable = () => (STORAGE === 'upstash' || STORAGE === 'file') && loadOk && lastSaveOk;
 
+/* ======================= conquête ======================= */
+// Le monde (zones, scores, journal, saisons passées) tient dans une seule entrée « conquest » ; ce que chaque joueur a fait
+// (camp, victoires) est dans sa fiche : p.cq = { s: numéro de saison, team, hits, caps }.
+let world = null, cqCache = { t: 0 };
+function markM(k) { dirty.add('m:' + k); scheduleFlush(); }
+const cqOf = (p, w) => (p && p.cq && p.cq.s === w.id ? p.cq : null);
+function cqPlayers(id) {            // joueurs d'une saison : effectif de chaque camp et meilleurs combattants
+  const members = { eau: 0, feu: 0, air: 0, terre: 0 }, list = [];
+  for (const q of players.values()) if (q.cq && q.cq.s === id && members[q.cq.team] !== undefined) { members[q.cq.team]++; list.push({ pid: q.pid, name: q.name, team: q.cq.team, hits: q.cq.hits || 0, caps: q.cq.caps || 0 }); }
+  list.sort((a, b) => b.caps - a.caps || b.hits - a.hits || (a.name < b.name ? -1 : 1));
+  return { members, list };
+}
+// Le monde à l'instant now : change de saison si besoin et verse les points des heures écoulées.
+function getWorld(now) {
+  now = now || Date.now();
+  if (!world) {
+    const saved = meta.get('conquest');
+    world = saved && Array.isArray(saved.zones) ? saved : null;
+    if (!world) { world = Conq.newWorld(now); meta.set('conquest', world); markM('conquest'); }
+  }
+  if (now >= world.end) {
+    const top = cqPlayers(world.id).list.slice(0, 3).map(x => ({ name: x.name, team: x.team, hits: x.hits, caps: x.caps }));
+    log(`conquête : fin de la saison ${world.id}`);
+    world = Conq.rollover(world, now, top); meta.set('conquest', world); markM('conquest'); cqCache = { t: 0 };
+  }
+  Conq.settle(world, now);
+  return world;
+}
+// Fin d'un combat de conquête : si l'attaquant a gagné, la zone perd un point de vie (et change peut-être de camp).
+function conquestResolve(g) {
+  if (g.cq.result) return;
+  const now = Date.now(), w = getWorld(now), p = players.get(g.cq.pid);
+  const won = g.winner >= 0 && g.players[g.winner] === g.cq.pid;
+  if (g.cq.season !== w.id) { g.cq.result = { kind: 'late' }; return; }          // la saison s'est terminée pendant le combat
+  if (!won) { g.cq.result = { kind: 'lost' }; return; }
+  const r = Conq.hit(w, g.cq.zone, g.cq.team, now, p ? p.name : '');
+  g.cq.result = r;
+  const me = cqOf(p, w);
+  if (me && (r.kind === 'hit' || r.kind === 'capture')) { me.hits = (me.hits || 0) + 1; if (r.kind === 'capture') me.caps = (me.caps || 0) + 1; markP(p.pid); }
+  cqCache = { t: 0 };
+  markM('conquest');
+}
+
 /* ======================= parties ======================= */
 const cellsOf = (g, s) => { let k = 0; for (let i = 0; i < g.c.length; i++) if (g.c[i] > 0 && g.o[i] === s) k++; return k; };
 const aliveSeats = g => { const r = []; for (let s = 0; s < g.np; s++) if (g.players[s] && cellsOf(g, s) > 0) r.push(s); return r; };
@@ -185,6 +229,7 @@ function finish(g) {
     }
   }
   g.result = res;
+  if (g.cq) conquestResolve(g);
   for (const pid of g.players) if (pid) pushProfile(pid);
 }
 /* ======================= joueurs IA ======================= */
@@ -212,7 +257,7 @@ function runBot(code, seq) {
   if (!g || g.status !== 'playing' || g.seq !== seq || !isBot(g.players[g.turn])) return;
   try {
     const seat = g.turn;
-    let i = Bot.choose(botLevel(g.players[seat]), { n: g.n, o: g.o, c: g.c, dead: g.dead || 0 }, seat, g.np, Math.random, null, g.teams || 0);
+    let i = Bot.choose(botLevel(g.players[seat]), { n: g.n, h: g.h, o: g.o, c: g.c, dead: g.dead || 0 }, seat, g.np, Math.random, null, g.teams || 0);
     if (!(Number.isInteger(i) && i >= 0 && i < g.c.length && g.o[i] === seat && g.c[i] > 0)) {    // garde-fou : coup toujours légal
       const own = []; for (let k = 0; k < g.c.length; k++) if (g.o[k] === seat && g.c[k] > 0) own.push(k);
       if (!own.length) return;
@@ -251,7 +296,7 @@ function settle(g, opt) {
   markG(g);
 }
 function applyMove(g, seat, i) {
-  const r = E.step({ n: g.n, o: g.o, c: g.c, np: g.np, dead: g.dead || 0 }, i, seat, teamArr(g), !!g.sudden, g.round || 0);
+  const r = E.step({ n: g.n, h: g.h, o: g.o, c: g.c, np: g.np, dead: g.dead || 0 }, i, seat, teamArr(g), !!g.sudden, g.round || 0);
   g.o = r.o; g.c = r.c; g.dead = r.dead; g.round = r.round; g.last = { i, p: seat };
   g.botWait = Math.min(6000, 450 + 380 * (r.frames.length - 1));      // durée de l'animation chez le joueur
   settle(g, { from: seat, advance: true });
@@ -262,7 +307,7 @@ function eliminate(g, seat) {              // abandon, absence ou délai dépass
   settle(g, { from: seat, advance: seat === g.turn });
 }
 function resetBoard(g, np) {
-  const b = E.newBoard(g.n, np, rnd(np));
+  const b = E.newBoard(g.n, np, rnd(np), g.h);
   g.np = np; g.o = b.o; g.c = b.c; g.dead = 0; g.round = 0; g.seen = []; if (np <= 4) g.sudden = false; g.turn = rnd(np); g.last = null; g.winner = -1; g.elim = []; g.result = null;
 }
 function joinSeat(g, pid) {
@@ -279,21 +324,33 @@ function joinSeat(g, pid) {
 }
 const activeCount = pid => { let k = 0; for (const g of games.values()) if (g.status !== 'done' && g.players.includes(pid)) k++; return k; };
 
+// Combat de conquête : la défense de la zone porte le nom du camp qui la tient.
+const cqDefName = g => (g.cq.def ? 'Défense ' + Conq.TEAM_NAMES[g.cq.def] : 'Garnison');
+function cqView(g) {
+  const Z = Conq.ZONE[g.cq.zone], w = getWorld(), z = g.cq.season === w.id ? Conq.zoneOf(w, Z.id) : null;
+  return { zone: Z.id, name: Z.name, a: Z.a, b: Z.b, team: g.cq.team, def: g.cq.def, lvl: Z.lvl, income: Z.income, bonus: Z.bonus,
+    hp: z ? z.hp : null, maxHp: Z.pv, owner: z ? z.owner : null, result: g.cq.result || null };
+}
 function viewFor(g, pid) {
   return {
-    code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status,
+    code: g.code, n: g.n, h: g.h || g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status,
     o: g.o, c: g.c, turn: g.turn, seq: g.seq, last: g.last, winner: g.winner,
     teams: g.teams || 0, host: g.players.indexOf(hostOf(g)), sudden: !!g.sudden, dead: g.dead || 0, round: g.round || 0, public: !!g.public,
-    seats: g.players.map((p, x) => { const w = who(p); return { filled: !!p, name: w ? w.name : '', rating: w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1 }; }),
-    me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result
+    seats: g.players.map((p, x) => {
+      const w = who(p), cq = g.cq && w;
+      return { filled: !!p, name: cq && w.bot ? cqDefName(g) : w ? w.name : '', rating: cq ? null : w ? w.elo : null, bot: !!(w && w.bot), team: g.teams ? x % g.teams : -1,
+        el: cq ? (w.bot ? g.cq.def : g.cq.team) : undefined };
+    }),
+    me: g.players.indexOf(pid), turnAt: g.turnAt, deadline: g.deadline, elim: g.elim, result: g.result, cq: g.cq ? cqView(g) : null
   };
 }
 function summary(g, pid) {
   const me = g.players.indexOf(pid);
   return {
-    code: g.code, n: g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status, me,
+    code: g.code, n: g.n, h: g.h || g.n, np: g.np, mode: g.mode, turnMs: g.turnMs, ranked: g.ranked, ai: g.ai || 0, status: g.status, me,
     turn: g.turn, winner: g.winner, deadline: g.deadline, updated: g.updated,
-    names: g.players.map(p => { const w = who(p); return w ? w.name : ''; }),
+    names: g.players.map(p => { const w = who(p); return w ? (g.cq && w.bot ? cqDefName(g) : w.name) : ''; }),
+    cq: g.cq ? { name: Conq.ZONE[g.cq.zone].name, team: g.cq.team } : null,
     filled: g.players.filter(Boolean).length, humans: g.players.filter(p => p && !isBot(p)).length, teams: g.teams || 0,
     result: g.result && me >= 0 ? { rank: g.result.ranks[me], delta: g.result.delta ? g.result.delta[me] : null, ranked: g.result.ranked } : null
   };
@@ -416,7 +473,7 @@ const OPS = {
       players.set(pid, p); markP(pid);
     }
     c.pid = pid;
-    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, vapid: vapid ? vapid.pub : null, bots: Bot.LEVELS } };
+    return { profile: prof(p), features: { durable: durable(), storage: STORAGE, test: TEST, turnChoicesH: TURN_CHOICES_H, conquest: true, vapid: vapid ? vapid.pub : null, bots: Bot.LEVELS } };
   },
   name(c, m) {
     const nm = clean(m.name); if (!nm) throw new Err('invalid');
@@ -476,7 +533,7 @@ const OPS = {
     if (g.status !== 'playing') throw new Err('not_playing');
     const seat = g.players.indexOf(c.pid), i = m.i;
     if (seat < 0 || seat !== g.turn) throw new Err('not_your_turn');
-    if (!Number.isInteger(i) || i < 0 || i >= g.n * g.n || g.o[i] !== seat || g.c[i] <= 0) throw new Err('invalid_move');
+    if (!Number.isInteger(i) || i < 0 || i >= g.n * (g.h || g.n) || g.o[i] !== seat || g.c[i] <= 0) throw new Err('invalid_move');
     applyMove(g, seat, i);
     pushGame(g);
     return {};
@@ -584,7 +641,7 @@ const OPS = {
   rematch(c, m) {
     const g = games.get(String(m.code || '').toUpperCase());
     if (!g) throw new Err('not_found');
-    if (g.status !== 'done' || !g.players.includes(c.pid)) throw new Err('forbidden');
+    if (g.status !== 'done' || !g.players.includes(c.pid) || g.cq) throw new Err('forbidden');
     resetBoard(g, g.np);
     g.seq++; g.updated = Date.now();
     startPlaying(g); markG(g); pushGame(g);
@@ -649,6 +706,46 @@ const OPS = {
     list.sort((x, y) => y.updated - x.updated);
     return { rooms: list.slice(0, 20) };
   },
+  conq(c) {                                       // l'état du monde de conquête
+    const now = Date.now(), w = getWorld(now), p = players.get(c.pid), mine = cqOf(p, w);
+    if (now - cqCache.t > 15000 || cqCache.id !== w.id) { const r = cqPlayers(w.id); cqCache = { t: now, id: w.id, members: r.members, top: r.list.slice(0, 10).map(x => ({ pid: x.pid, name: x.name, team: x.team, hits: x.hits, caps: x.caps })) }; }
+    const snap = Conq.snapshot(w, mine ? mine.team : null, now);
+    for (const z of snap.zones) { const l = Bot.byLevel(z.lvl); z.ai = { name: l.name, elo: l.elo }; }
+    let busy = null;
+    for (const g of games.values()) if (g.cq && g.cq.pid === c.pid && g.status === 'playing' && g.cq.season === w.id) { busy = { code: g.code, zone: g.cq.zone }; break; }
+    return Object.assign(snap, { now, members: cqCache.members, top: cqCache.top.map(x => ({ name: x.name, team: x.team, hits: x.hits, caps: x.caps, me: x.pid === c.pid })),
+      me: mine ? { team: mine.team, hits: mine.hits || 0, caps: mine.caps || 0 } : null, busy, bonusHours: Conq.CAPTURE_BONUS_H });
+  },
+  conqteam(c, m) {                                // choisir son camp pour la saison (définitif jusqu'au lundi)
+    const w = getWorld(), p = players.get(c.pid), team = String(m.team || '');
+    if (!Conq.TEAMS.includes(team)) throw new Err('invalid');
+    if (cqOf(p, w)) throw new Err('locked');
+    p.cq = { s: w.id, team, hits: 0, caps: 0 }; markP(p.pid); cqCache = { t: 0 };
+    return {};
+  },
+  conqatk(c, m) {                                 // attaquer une zone : un combat contre l'IA qui la défend
+    const now = Date.now(), w = getWorld(now), p = players.get(c.pid), me = cqOf(p, w);
+    if (!me) throw new Err('no_team');
+    const Z = Conq.ZONE[String(m.zone || '')];
+    if (!Z) throw new Err('invalid');
+    for (const g of games.values()) if (g.cq && g.cq.pid === c.pid && g.status === 'playing') {
+      if (g.cq.zone === Z.id && g.cq.season === w.id) return { code: g.code };      // le combat est déjà lancé : on le reprend
+      throw new Err('busy');
+    }
+    const why = Conq.whyNot(w, me.team, Z.id);
+    if (why) throw new Err(why === 'own' ? 'own' : 'far');
+    if (activeCount(c.pid) >= MAX_ACTIVE_PER_PLAYER) throw new Err('too_many');
+    if (games.size >= MAX_GAMES) throw new Err('full');
+    let code = '';
+    for (let t = 0; t < 50; t++) { let s2 = ''; for (let i = 0; i < 4; i++) s2 += ALPHABET[rnd(ALPHABET.length)]; if (!games.has(s2)) { code = s2; break; } }
+    if (!code) throw new Err('full');
+    const z = Conq.zoneOf(w, Z.id), b = E.newBoard(Z.a, 2, rnd(2), Z.b);
+    const g = { code, n: Z.a, h: Z.b, np: 2, mode: 'live', turnMs: 0, ranked: false, status: 'waiting', players: [c.pid, `bot:${Z.lvl}:1`],
+      o: b.o, c: b.c, turn: rnd(2), seq: 0, last: null, winner: -1, elim: [], result: null, turnAt: null, deadline: null, created: now, updated: now, host: c.pid, teams: 0,
+      sudden: false, dead: 0, round: 0, public: false, ai: Z.lvl, cq: { zone: Z.id, team: me.team, pid: c.pid, def: z.owner, season: w.id, result: null } };
+    startPlaying(g); games.set(code, g); markG(g); scheduleBot(g);
+    return { code };
+  },
   top(c) {
     const all = [...players.values()].filter(p => p.games > 0).sort((a, b) => b.elo - a.elo || b.games - a.games);
     const top = all.slice(0, 20).map(p => ({ name: p.name, elo: p.elo, games: p.games, wins: p.wins, me: p.pid === c.pid }));
@@ -677,6 +774,7 @@ function handle(c, raw, limited) {
 /* ======================= délais et entretien ======================= */
 function tick() {
   const now = Date.now();
+  try { getWorld(now); } catch (e) { console.error('conquête :', e); }
   remindTurns(now);
   for (const g of [...games.values()]) {
     if (g.status === 'playing') scheduleBot(g);                // reprise après un redémarrage

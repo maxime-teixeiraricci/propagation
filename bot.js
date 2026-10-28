@@ -22,17 +22,18 @@ const LEVELS = [
 ];
 
 const NB = new Map();
-function nbTable(n, dead) {            // dead : anneaux disparus (mort subite)
-  const key = n + ':' + (dead || 0);
+function nbTable(n, dead, h) {         // dead : anneaux disparus (mort subite) ; h : hauteur (grille rectangulaire)
+  h = h || n;
+  const key = n + 'x' + h + ':' + (dead || 0);
   let t = NB.get(key);
-  if (!t) { t = []; for (let i = 0; i < n * n; i++) t.push(Int16Array.from(E.neighbors(n, i, dead || 0))); NB.set(key, t); }
+  if (!t) { t = []; for (let i = 0; i < n * h; i++) t.push(Int16Array.from(E.neighbors(n, i, dead || 0, h))); NB.set(key, t); }
   return t;
 }
-const clone = st => ({ n: st.n, dead: st.dead || 0, o: Int8Array.from(st.o), c: Int8Array.from(st.c) });
+const clone = st => ({ n: st.n, h: st.h, dead: st.dead || 0, o: Int8Array.from(st.o), c: Int8Array.from(st.c) });
 
 // Joue le coup du joueur p en i, sur place. Mêmes règles que Engine.simulate. Renvoie le gagnant (ou -1).
 function play(st, i, p, TM) {
-  const n = st.n, o = st.o, c = st.c, T = nbTable(n, st.dead);
+  const n = st.n, o = st.o, c = st.c, T = nbTable(n, st.dead, st.h);
   c[i] += 1; o[i] = p;
   if (c[i] < 4) return -1;
   let hot = [i];
@@ -142,7 +143,7 @@ const SETTINGS = {
 function choose(level, board, seat, N, rng, override, teams) {
   const TM = teams ? Array.from({ length: N }, (_, s) => s % teams) : null;
   rng = rng || Math.random;
-  const st = { n: board.n, dead: board.dead || 0, o: Int8Array.from(board.o), c: Int8Array.from(board.c) };
+  const st = { n: board.n, h: board.h || board.n, dead: board.dead || 0, o: Int8Array.from(board.o), c: Int8Array.from(board.c) };
   const moves = myMoves(st, seat);
   if (!moves.length) return -1;
   if (moves.length === 1 || (level <= 1 && !override)) return moves[Math.floor(rng() * moves.length)];

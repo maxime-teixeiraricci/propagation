@@ -50,6 +50,19 @@ La même page s'adapte à l'écran. Sur ordinateur (fenêtre assez large), l'acc
 - Ces Élo ont été mesurés par des parties entre les IA (1 contre 1, grille 8 × 8, 250 parties entre niveaux voisins, places et premier joueur tirés au sort). L'échelle est calée en donnant 1000 au niveau « Amateur » : ce sont des repères entre IA, pas une mesure sur de vrais joueurs. À 4 joueurs ou plus, ces Élo restent une estimation.
 - Si tu abandonnes à 4 joueurs ou plus, la partie s'arrête (les IA ne se battent pas entre elles) et tu finis dernier.
 
+## Conquête (quatre camps, une carte)
+
+Un mode à part, depuis la carte « Conquête » de l'accueil. Les règles :
+
+- **Quatre camps :** eau, feu, air, terre. Chaque joueur en choisit un pour la semaine (il ne peut pas en changer avant lundi).
+- **Une carte de 17 zones** de tailles différentes. Les quatre camps ont exactement la même carte (elle est symétrique) et démarrent chacun avec une zone.
+- **Attaquer :** on attaque une zone qui touche une zone de son camp. Le combat est une partie contre l'IA qui défend la zone, sur une grille de la taille de la zone (a × b). Plus la zone est grande, plus l'IA est forte.
+- **Points de vie :** chaque victoire retire 1 point de vie à la zone. À zéro, elle passe au camp du vainqueur, avec tous ses points de vie, et ce camp reçoit un bonus de capture (6 heures de production de la zone). Perdre un combat ne coûte rien.
+- **Production :** chaque heure, une zone de a × b rapporte (a + b) + (a × b) points à son camp (35 points pour 5 × 5, 120 pour le Nexus en 10 × 10).
+- **Saison :** du lundi 00 h au lundi suivant (heure de Paris). Le camp qui a le plus de points gagne, puis la carte et les scores repartent de zéro et chacun peut changer de camp. Les saisons passées restent consultables.
+
+Ce mode demande une sauvegarde durable (voir « Garder les parties ») : sans elle, la carte est remise à zéro à chaque redémarrage du serveur. Les réglages (tailles, niveaux d'IA, points de vie, bonus) sont en haut de `conquest.js`.
+
 ## Notifications « c'est ton tour »
 
 - Dans « Mon compte », le bouton « Activer les notifications » prévient cet appareil quand c'est son tour, même page fermée. Il faut l'activer sur chaque appareil (ordinateur, téléphone).
