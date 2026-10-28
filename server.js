@@ -34,7 +34,9 @@ const KICK_LIVE_MS = Number(process.env.KICK_LIVE_MS) || 45 * 1000;   // partie 
 const GRACE_MS = Number(process.env.GRACE_MS) || 30 * 60 * 1000;      // répit après un redémarrage du serveur
 const DAY = 24 * 3600 * 1000;
 const TURN_CHOICES_H = [12, 24, 48, 72];
-const START_ELO = 1000, K_FACTOR = 32, MIN_ELO = 100;
+const START_ELO = 1000, MIN_ELO = E.ELO_MIN, ELO_SCALE = E.ELO_SCALE, K_FACTOR = Math.round(32 * ELO_SCALE);
+// Passage de l'ancienne échelle (100–1960) à la nouvelle (700–3500) : même droite que les IA.
+const oldToNew = e => Math.max(E.ELO_MIN, Math.round(E.ELO_MIN + (e - 100) * ELO_SCALE));
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'https://github.com/maxime-teixeiraricci/propagation';
 const MAX_PUSH_PER_PLAYER = 5;
 const BOT_FAST = TEST && process.env.BOT_FAST === '1';        // essais : les IA jouent presque tout de suite
@@ -67,6 +69,20 @@ async function up(cmd) {
   if (!r.ok || j.error) throw new Error('Upstash : ' + (j.error || r.status));
   return j.result;
 }
+function migrateElo() {
+  if (!loadOk) return;
+  let n = 0;
+  for (const p of players.values()) {
+    if (p.sv >= 2) continue;
+    p.elo = p.games > 0 ? oldToNew(p.elo) : START_ELO; p.sv = 2; markP(p.pid); n++;
+  }
+  for (const g of games.values()) {
+    const r = g.result;
+    if (!r || !r.ranked || g.sv >= 2) continue;
+    r.before = r.before.map(oldToNew); r.after = r.after.map(oldToNew); g.sv = 2; markG(g);
+  }
+  if (n) log(`Élo converti vers l'échelle 700–3500 pour ${n} joueurs`);
+}
 async function loadAll() {
   if (STORAGE === 'file') {
     try {
@@ -94,6 +110,7 @@ async function loadAll() {
       }
     } catch (e) { loadOk = false; lastSaveOk = false; lastSaveError = String(e.message || e); log('chargement Upstash impossible :', lastSaveError); }
   }
+  migrateElo();
   log(`stockage : ${STORAGE}${loadOk ? '' : ' (ERREUR)'} · ${players.size} joueurs, ${games.size} parties chargés`);
 }
 function scheduleFlush(ms) { if (STORAGE === 'memory' || flushTimer) return; flushTimer = setTimeout(flush, ms || 800); }
@@ -214,9 +231,9 @@ function finish(g) {
       let delta;
       if (T) {                                   // par équipes : Élo moyen de chaque équipe, même variation pour tous ses joueurs
         const avg = Array.from({ length: T }, (_, t) => { const m = before.filter((_, x) => x % T === t); return m.reduce((a, b) => a + b, 0) / m.length; });
-        const d = E.eloDeltas(avg, tr, K_FACTOR);
+        const d = E.eloDeltas(avg, tr, K_FACTOR, ELO_SCALE);
         delta = before.map((_, x) => d[x % T]);
-      } else delta = E.eloDeltas(before, ranks, K_FACTOR);
+      } else delta = E.eloDeltas(before, ranks, K_FACTOR, ELO_SCALE);
       const after = before.slice();
       ws.forEach((x, i) => {                    // les IA gardent leur Élo fixe ; seuls les humains bougent
         if (x.bot) return;
@@ -492,7 +509,7 @@ const OPS = {
     if (p) { if (!safeEq(p.h, h)) throw new Err('auth'); }
     else {
       if (players.size >= MAX_PLAYERS) throw new Err('full');
-      p = { pid, h, name: clean(m.name) || 'Joueur ' + pid.slice(0, 4), elo: START_ELO, games: 0, wins: 0, created: Date.now() };
+      p = { pid, h, name: clean(m.name) || 'Joueur ' + pid.slice(0, 4), elo: START_ELO, games: 0, wins: 0, sv: 2, created: Date.now() };
       players.set(pid, p); markP(pid);
     }
     c.pid = pid;

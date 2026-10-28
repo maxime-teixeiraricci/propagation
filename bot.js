@@ -5,20 +5,20 @@
 const E = require('./engine.js');
 
 // Élo fixe de chaque niveau, mesuré par des parties entre les IA (2 joueurs, grille 8×8, places et premier joueur tirés au sort,
-// 250 parties entre niveaux voisins, ajustement de type Bradley-Terry). L'échelle est calée en donnant 1000 au niveau « Amateur » :
-// ce sont des repères entre IA, pas une mesure sur de vrais joueurs. Le Novice joue au hasard (mesuré à environ 30, plancher des Élo : 100).
+// 250 parties entre niveaux voisins, ajustement de type Bradley-Terry). L'échelle est calée sur la plage 700 (Novice) – 3500 (Grand maître) :
+// ce sont des repères entre IA, pas une mesure sur de vrais joueurs. Le Novice joue au hasard (mesuré à environ 30, plancher des Élo : 700).
 const LEVELS = [
-  { level: 1,  name: 'Novice',        elo: 100 },
-  { level: 2,  name: 'Apprenti',      elo: 620 },
-  { level: 3,  name: 'Débutant',      elo: 810 },
-  { level: 4,  name: 'Amateur',       elo: 1000 },
-  { level: 5,  name: 'Régulier',      elo: 1100 },
-  { level: 6,  name: 'Intermédiaire', elo: 1230 },
-  { level: 7,  name: 'Avancé',        elo: 1290 },
-  { level: 8,  name: 'Confirmé',      elo: 1400 },
-  { level: 9,  name: 'Expert',        elo: 1680 },
-  { level: 10, name: 'Maître',        elo: 1800 },
-  { level: 11, name: 'Grand maître',  elo: 1960 }
+  { level: 1,  name: 'Novice',        elo: 700 },
+  { level: 2,  name: 'Apprenti',      elo: 1480 },
+  { level: 3,  name: 'Débutant',      elo: 1770 },
+  { level: 4,  name: 'Amateur',       elo: 2050 },
+  { level: 5,  name: 'Régulier',      elo: 2210 },
+  { level: 6,  name: 'Intermédiaire', elo: 2400 },
+  { level: 7,  name: 'Avancé',        elo: 2490 },
+  { level: 8,  name: 'Confirmé',      elo: 2660 },
+  { level: 9,  name: 'Expert',        elo: 3080 },
+  { level: 10, name: 'Maître',        elo: 3260 },
+  { level: 11, name: 'Grand maître',  elo: 3500 }
 ];
 
 const NB = new Map();

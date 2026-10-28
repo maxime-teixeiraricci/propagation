@@ -87,7 +87,7 @@ h3.sub{font:600 15px/1.2 var(--display); margin:6px 0 0}
 .rk-bar i{display:block; height:100%; width:0; background:var(--rkc,var(--p0)); border-radius:99px; transition:width .9s cubic-bezier(.2,.8,.2,1)}
 .rankline small{color:var(--muted); font-size:13px}
 .top .emb{margin:-3px 0}
-.pl .rt .emb{width:14px; height:17px; margin:-3px 3px -3px 0}
+.pl .rt .emb{width:17px; height:17px; margin:-3px 3px -3px 0}
 .ritual{position:fixed; inset:0; z-index:50; display:grid; place-items:center; padding:16px; background:rgba(8,12,18,.74); backdrop-filter:blur(4px); animation:rtfade .3s ease both}
 .ritual canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
 .rt-card{position:relative; width:min(100%,380px); background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px 22px 22px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; box-shadow:0 20px 60px rgba(0,0,0,.35)}
@@ -350,7 +350,7 @@ details ol{font-weight:700}
 .pl .nm{font:800 17px/1.15 var(--display)}
 .pl .rt{display:flex; align-items:center; gap:6px; min-width:0; font:800 12.5px/1 var(--body); color:var(--muted); margin:1px 0 2px}
 .pl .rt:empty{display:none}
-.pl .rt .emb{width:15px; height:20px; margin:-2px 0}
+.pl .rt .emb{width:20px; height:20px; margin:-2px 0}
 .pl .rn{color:var(--rc,var(--fg)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
 .pl .re{margin-left:auto; flex:none; font-variant-numeric:tabular-nums}
 .pl .st{font:800 12.5px/1.3 var(--body); color:var(--muted)}
@@ -391,7 +391,7 @@ details ol{font-weight:700}
 .seat .nm{font:800 18px/1.15 var(--display)}
 .seat .sub{color:var(--muted); font-weight:600}
 .seat .rb{display:inline-flex; align-items:center; gap:6px; color:var(--fg); font-weight:800}
-.seat .rb .emb{width:18px; height:24px}
+.seat .rb .emb{width:24px; height:24px}
 .seat .rb .rn{color:var(--rc,var(--fg))}
 .share .code{font:800 44px/1 var(--display); letter-spacing:.14em; color:#FFD93D; -webkit-text-stroke:6px var(--ink); paint-order:stroke fill; text-shadow:0 4px 0 var(--ink)}
 
@@ -453,8 +453,8 @@ details.adv > :not(summary){margin-top:12px}
 /* bandeau compte : l'essentiel d'un coup d'œil, le reste est replié */
 .mebar{padding:16px 18px; gap:12px; display:flex; flex-direction:column}
 .mb-top{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:0 14px; align-items:start}
-.mb-emb{display:block; min-width:42px}
-.mb-emb svg.emb{height:58px; width:44px}
+.mb-emb{display:block; min-width:52px}
+.mb-emb svg.emb{height:52px; width:52px}
 .mb-main{display:flex; flex-direction:column; min-width:0}
 .mb-main input{font:700 17px var(--body); padding:7px 12px; border-radius:10px}
 .mb-main .fl{margin-bottom:4px}
@@ -818,7 +818,7 @@ ol.cqlist .r{width:2ch; font:800 16px var(--display); color:var(--muted)}
       </ol>
       <h3 class="sub">À savoir</h3>
       <ul class="tips">
-        <li><b>Partie classée :</b> chacun commence à 1000 Élo. Battre un joueur mieux classé rapporte plus. Les 15 rangs vont de Pierre à Infinite Master X.</li>
+        <li><b>Partie classée :</b> chacun commence à 1000 Élo. Battre un joueur mieux classé rapporte plus. Les 15 rangs vont de D (700 Élo) à X (3500 Élo), par paliers de 200 points.</li>
         <li><b>Longue durée :</b> chaque joueur a de 12 h à 72 h pour jouer son coup, sinon il est éliminé. Tu peux fermer la page entre deux coups.</li>
         <li><b>Mort subite</b> (à 6 et 8 joueurs, en option) : à partir du 30e tour, le bord de la grille disparaît tous les 5 tours.</li>
       </ul>
@@ -1052,45 +1052,34 @@ const fmtTurn=ms=>{ const h=Math.round(ms/3600000); return ms<3600000?`${Math.ro
 const ord=r=>r===1?'1er':r+'e';
 
 /* ---------- rangs ---------- */
-// Écusson d'un rang : 15 couleurs, un symbole par palier (chevrons, gemme, étoile), et 5 points qui montrent la place dans le palier.
-const RCOL=['#8B9096','#D2763A','#A86B2E','#A9B4C0','#E0A400','#55C2A2','#2E9E5B','#D6334A','#3B6FE0','#5CD0F2','#8E5CF2','#C13DD6','#F0603A','#1E2347','#7B61FF'];
+// Écusson d'un rang : une lettre en couleur sur une plaque sombre, comme les notes des jeux de classement.
+// Pierre = D, puis C−, C, C+, B−, B, B+, A−, A, A+, S−, S, S+, SS, et Infinite Master X = X. Le cadre change à chaque palier (argent, or, arc-en-ciel).
+const RCOL=['#A99BE0','#6FD0B0','#52D68A','#7BE05A','#C8E04A','#FFD43B','#FFB02E','#FF8A3D','#FF6B4A','#FF4D6D','#FF4DB8','#D65CFF','#9B7BFF','#5CC8FF','#FF7A9C'];
+const RLET=['D','C−','C','C+','B−','B','B+','A−','A','A+','S−','S','S+','SS','X'];
 const mixc=(hex,t,to)=>{ const v=parseInt(hex.slice(1),16); return '#'+[v>>16&255,v>>8&255,v&255].map(c=>Math.round(c+(to-c)*t).toString(16).padStart(2,'0')).join(''); };
 let embN=0;
 function emblem(elo,h){
-  const r=rankOf(elo), k=r.index, j=r.pos-1, base=RCOL[k], inf=k===14, eter=k===13, tier=r.tier, id='e'+k+'_'+(embN++);
-  const hi=mixc(base,.6,255), lo=mixc(base,.5,0);
-  const rimA=tier===0?mixc(base,.4,255):tier===1?'#F7FAFD':'#FFE9A0', rimB=tier===0?mixc(base,.55,0):tier===1?'#8498B0':'#B07A18';
-  const face=inf?['#4B3A9C','#2A2060','#150F38']:eter?['#3B4478','#1E2347','#0F1330']:[hi,base,lo];
-  const S=[
-    'M24 3 L42 9 V28 C42 40 34 48 24 53 C14 48 6 40 6 28 V9 Z',                                   // palier 1 : écu
-    'M24 2 L43 13 V35 L24 54 L5 35 V13 Z',                                                          // palier 2 : cristal
-    'M5 13 L13 7 L18 12 L24 3 L30 12 L35 7 L43 13 V30 C43 41 34 49 24 54 C14 49 5 41 5 30 Z'        // palier 3 : couronne
-  ][tier];
-  const T='translate(24 29) scale(.84) translate(-24 -29)';
-  const gl=(c,dy)=>{
-    if(tier===0){ const ch=y=>`<path d="M14.5 ${y+dy+6} L24 ${y+dy} L33.5 ${y+dy+6}" fill="none" stroke="${c}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`; return ch(19)+ch(28); }
-    if(tier===1) return '';
-    if(inf) return `<path d="M10 ${28+dy} C10 ${19+dy} 20 ${19+dy} 24 ${28+dy} C28 ${37+dy} 38 ${37+dy} 38 ${28+dy} C38 ${19+dy} 28 ${19+dy} 24 ${28+dy} C20 ${37+dy} 10 ${37+dy} 10 ${28+dy} Z" fill="none" stroke="${c}" stroke-width="4" stroke-linejoin="round"/>`;
-    return `<polygon points="24,${14+dy} 27.2,${22+dy} 35.5,${22.7+dy} 29.2,${28.2+dy} 31.2,${36.5+dy} 24,${32+dy} 16.8,${36.5+dy} 18.8,${28.2+dy} 12.5,${22.7+dy} 20.8,${22+dy}" fill="${c}" stroke="${c}" stroke-width="1.2" stroke-linejoin="round"/>`;
-  };
-  let glyph;
-  if(tier===1){
-    const f=[mixc(base,.85,255),mixc(base,.5,255),mixc(base,.1,255),mixc(base,.35,0)], w='stroke="#fff" stroke-opacity=".55" stroke-width=".7" stroke-linejoin="round"';
-    glyph=`<polygon points="15,25 24,16 24,25" fill="${f[0]}" ${w}/><polygon points="24,16 33,25 24,25" fill="${f[1]}" ${w}/><polygon points="15,25 24,25 24,42" fill="${f[2]}" ${w}/><polygon points="24,25 33,25 24,42" fill="${f[3]}" ${w}/>`;
-    glyph=`<g transform="translate(0 1)" opacity=".28"><polygon points="15,25 24,16 33,25 24,42" fill="#000"/></g>`+glyph;
-  } else {
-    const lc=inf?`url(#${id}g)`:eter?'#FFD866':tier===2?'#FFF1B8':mixc(base,.78,255);
-    glyph=`<g opacity=".3">${gl('#000',1.4)}</g>`+gl(lc,0);
-  }
-  const defs=`<defs><linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${face[0]}"/><stop offset=".5" stop-color="${face[1]}"/><stop offset="1" stop-color="${face[2]}"/></linearGradient>`
-    +`<linearGradient id="${id}r" x1="0" y1="0" x2="0" y2="1">${inf?'<stop offset="0" stop-color="#FF8A8A"/><stop offset=".3" stop-color="#FFE066"/><stop offset=".6" stop-color="#5EE6A0"/><stop offset="1" stop-color="#8C7BFF"/>':`<stop offset="0" stop-color="${rimA}"/><stop offset="1" stop-color="${rimB}"/>`}</linearGradient>`
-    +(inf?`<linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7A7A"/><stop offset=".35" stop-color="#FFE066"/><stop offset=".65" stop-color="#5EE6A0"/><stop offset="1" stop-color="#9C8CFF"/></linearGradient>`:'')
-    +`<clipPath id="${id}c"><path d="${S}" transform="${T}"/></clipPath></defs>`;
-  const wing=tier===2?`<g fill="url(#${id}r)" stroke="${rimB}" stroke-width=".8" stroke-linejoin="round"><path d="M6 17 C1 16 0 25 3 32 C5 28 8 25 8 21 Z"/><path d="M42 17 C47 16 48 25 45 32 C43 28 40 25 40 21 Z"/></g>`:'';
-  const pc=inf?'#B9A8FF':eter?'#FFD866':hi;
-  const pips=[0,1,2,3,4].map(i=>i<=j?`<circle cx="${8+i*8}" cy="60" r="2.5" fill="${pc}" stroke="${tier===2?rimB:lo}" stroke-width=".9"/>`:`<circle cx="${8+i*8}" cy="60" r="2.3" fill="#000" fill-opacity=".3" stroke="#fff" stroke-opacity=".25" stroke-width=".6"/>`).join('');
-  const glow=(eter||inf)?` style="filter:drop-shadow(0 0 3px ${inf?'#9C8CFF':'#E7B64B'})"`:'';
-  return `<svg class="emb" viewBox="0 0 48 64" ${h?`height="${h}" width="${Math.round(h*.75)}"`:''} role="img" aria-label="${r.name}"${glow}>${defs}${wing}<path d="${S}" fill="url(#${id}r)" stroke="${tier===1?'#6C7F97':lo}" stroke-width=".9" stroke-linejoin="round"/><path d="${S}" transform="${T}" fill="url(#${id}f)"/><g clip-path="url(#${id}c)"><ellipse cx="17" cy="14" rx="17" ry="9" fill="#fff" opacity=".22" transform="rotate(-22 17 14)"/></g><path d="${S}" transform="${T}" fill="none" stroke="#000" stroke-opacity=".25" stroke-width=".8"/>${glyph}${pips}</svg>`;
+  const r=rankOf(elo), k=r.index, base=RCOL[k], tier=r.tier, id='e'+k+'_'+(embN++), L=RLET[k], X=k===14, SS=k===13;
+  const letter=L[0], mod=L.length>1&&!SS?L[1]:'';
+  const hi=mixc(base,.55,255), lo=mixc(base,.4,0);
+  const rim=tier===0?['#E6EEFF','#8FA2CF']:tier===1?['#FFF3B0','#D39A14']:['#FF9ACB','#FFE27A','#7BF0B8','#8FA8FF'];
+  const face=tier===2?['#2D2270','#0E0A36']:['#33438F','#141B52'];
+  const fill=X?`url(#${id}x)`:`url(#${id}l)`;
+  const defs=`<defs><linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1">${rim.map((c,i)=>`<stop offset="${i/(rim.length-1)}" stop-color="${c}"/>`).join('')}</linearGradient>`
+    +`<linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${face[0]}"/><stop offset="1" stop-color="${face[1]}"/></linearGradient>`
+    +`<linearGradient id="${id}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset=".55" stop-color="${base}"/><stop offset="1" stop-color="${lo}"/></linearGradient>`
+    +(X?`<linearGradient id="${id}x" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7A7A"/><stop offset=".35" stop-color="#FFE066"/><stop offset=".65" stop-color="#5EE6A0"/><stop offset="1" stop-color="#9C8CFF"/></linearGradient>`:'')
+    +`<clipPath id="${id}c"><rect x="4" y="4" width="48" height="48" rx="11"/></clipPath></defs>`;
+  const fs=SS?33:X?38:36, cx=mod?23:28, cy=X?38.5:39.5;
+  const txt=(dx,dy,f,extra)=>`<text x="${cx+dx}" y="${cy+dy}" text-anchor="middle" font-family="Rubik,Nunito,system-ui,sans-serif" font-weight="900" font-size="${fs}" ${SS?'letter-spacing="-3.5" ':''}fill="${f}"${extra||''}>${SS?'SS':letter}</text>`;
+  // « + » ou « − » en haut à droite, dessinés (pas de police)
+  const modG=mod?(mod==='+'?`<rect x="36.5" y="12" width="12" height="4.6" rx="1.6" fill="${fill}"/><rect x="40.2" y="8.3" width="4.6" height="12" rx="1.6" fill="${fill}"/>`:`<rect x="36.5" y="12" width="12" height="4.6" rx="1.6" fill="${fill}"/>`):'';
+  const glow=(k>=13)?` style="filter:drop-shadow(0 0 3px ${X?'#9C8CFF':'#5CC8FF'})"`:'';
+  return `<svg class="emb" viewBox="0 0 56 56" ${h?`height="${h}" width="${h}"`:''} role="img" aria-label="${r.name} (${L})"${glow}>${defs}`
+    +`<rect x="2" y="2" width="52" height="52" rx="13" fill="url(#${id}r)"/><rect x="4.4" y="4.4" width="47.2" height="47.2" rx="11" fill="url(#${id}f)"/>`
+    +`<g clip-path="url(#${id}c)"><ellipse cx="18" cy="9" rx="26" ry="11" fill="#fff" opacity=".13" transform="rotate(-14 18 9)"/></g>`
+    +`<g opacity=".45">${txt(0,1.8,'#000')}${mod?`<g transform="translate(0 1.8)">${modG.replace(/url\(#[^)]+\)/g,'#000')}</g>`:''}</g>`
+    +txt(0,0,fill,` stroke="#fff" stroke-opacity=".35" stroke-width=".7" paint-order="stroke"`)+modG+`</svg>`;
 }
 const rankColor=elo=>RCOL[rankOf(elo).index];
 // Rang d'un joueur : écusson + nom du rang + Élo, pour les cartes de la partie.
@@ -1782,7 +1771,7 @@ function fillLevels(){
   const bots=(Net.features&&Net.features.bots)||[], sel=$('#level');
   const has=bots.length>0; $('#opp').querySelector('option[value="ai"]').disabled=!has; if(typeof syncOpp==='function') syncOpp();
   if(!has||sel.options.length) return;
-  const mine=(Net.profile&&Net.profile.elo)||1000;
+  const mine=((Net.profile&&Net.profile.elo)||1000)+300;   // un cran au-dessus de son niveau
   let best=bots[0]; bots.forEach(b=>{ if(Math.abs(b.elo-mine)<Math.abs(best.elo-mine)) best=b; });   // niveau proche de ton Élo par défaut
   sel.innerHTML=bots.map(b=>`<option value="${b.level}"${b===best?' selected':''}>${b.name} · Élo ${b.elo}</option>`).join('');
   $('#r-fill').innerHTML=sel.innerHTML;

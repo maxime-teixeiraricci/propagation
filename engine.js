@@ -157,27 +157,29 @@
 
   // Élo à N joueurs : chaque paire de joueurs est comptée comme un duel (victoire, nul ou défaite selon le rang),
   // et chaque duel pèse K/(N-1). À deux joueurs, c'est l'Élo classique.
-  function eloDeltas(ratings, ranks, K) {
-    K = K || 32;
+  function eloDeltas(ratings, ranks, K, scale) {
+    K = K || 32; scale = scale || 1;
     const N = ratings.length, d = new Array(N).fill(0);
     if (N < 2) return d;
     for (let a = 0; a < N; a++) {
       for (let b = 0; b < N; b++) {
         if (a === b) continue;
         const S = ranks[a] < ranks[b] ? 1 : ranks[a] === ranks[b] ? 0.5 : 0;
-        const E = 1 / (1 + Math.pow(10, (ratings[b] - ratings[a]) / 400));
+        const E = 1 / (1 + Math.pow(10, (ratings[b] - ratings[a]) / (400 * scale)));
         d[a] += (K / (N - 1)) * (S - E);
       }
     }
     return d.map(Math.round);
   }
 
-  // Rangs : 15 rangs en 3 paliers de 5, de « Pierre » à « Infinite Master X ». Chaque rang couvre 80 points d'Élo.
-  // Un nouveau joueur (Élo 1000) démarre au milieu d'Argent.
+  // Rangs : 15 rangs en 3 paliers de 5, de D à X. L'échelle d'Élo va de 700 (plancher) à 3500 (début du rang X) : 200 points par rang.
+  // Un nouveau joueur (Élo 1000) démarre au milieu de C−. ELO_SCALE étire la courbe d'Élo (écart de 400 → 400 × ELO_SCALE pour 10 contre 1)
+  // afin que les écarts entre niveaux d'IA gardent le même sens qu'avant l'élargissement de l'échelle.
+  const ELO_MIN = 700, ELO_MAX_RANK = 3500, ELO_SCALE = 2800 / 1860;
   const RANK_TIERS = ['Matières', 'Gemmes', 'Maîtres'];
   const RANK_NAMES = ['Pierre', 'Cuivre', 'Bronze', 'Argent', 'Or', 'Jade', 'Émeraude', 'Rubis', 'Saphir', 'Diamant',
     'Master', 'Grand Master', 'Mythic Master', 'Eternal Master', 'Infinite Master X'];
-  const RANK_FLOORS = [100, 790, 870, 950, 1030, 1110, 1190, 1270, 1350, 1430, 1510, 1590, 1670, 1750, 1830];
+  const RANK_FLOORS = Array.from({ length: 15 }, (_, i) => 700 + 200 * i);
   function rankOf(elo) {
     elo = Math.max(RANK_FLOORS[0], Math.round(Number(elo) || 0));
     let k = 0;
@@ -187,7 +189,7 @@
       lo, hi, progress: hi ? (elo - lo) / (hi - lo) : 1, toNext: hi ? hi - elo : 0, nextName: k + 1 < RANK_NAMES.length ? RANK_NAMES[k + 1] : null };
   }
 
-  const api = { RANK_TIERS, RANK_NAMES, RANK_FLOORS, rankOf, neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
+  const api = { ELO_MIN, ELO_MAX_RANK, ELO_SCALE, RANK_TIERS, RANK_NAMES, RANK_FLOORS, rankOf, neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Engine = api;
 })(typeof window !== 'undefined' ? window : this);
