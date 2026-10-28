@@ -10,6 +10,7 @@ La même page s'adapte à l'écran. Sur ordinateur (fenêtre assez large), l'acc
 
 ## Modes
 
+- **Départ :** chaque joueur commence avec une seule case, qui porte 3 points (réglage `START_POINTS` dans `engine.js`).
 - 2, 4, 6 ou 8 joueurs, chacun pour soi. Grilles proposées : 5, 6 ou 8 (2 joueurs), 6, 8 ou 10 (4), 9, 10 ou 12 (6), 10, 12 ou 14 (8) ; la taille par défaut est la deuxième de la liste (6, 8, 10 ou 12). Sur ordinateur, la grille est plafonnée à 620 pixels. Chaque joueur a une couleur et une forme de point.
 - **Rapide** : tout le monde est connecté. Si quelqu'un ne joue plus pendant 45 secondes, les autres peuvent l'éliminer.
 - **Longue durée** : chaque joueur a 12, 24, 48 ou 72 heures par coup. On peut fermer la page entre deux coups. Un joueur qui dépasse son délai est éliminé.

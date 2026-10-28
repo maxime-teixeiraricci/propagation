@@ -41,6 +41,7 @@
   // Nombre de joueurs -> tailles de grille proposées (les trois premières) et taille par défaut (la quatrième).
   const SIZES = { 2: [5, 6, 8, 6], 4: [6, 8, 10, 8], 6: [9, 10, 12, 10], 8: [10, 12, 14, 12] };
 
+  const START_POINTS = 3;                                    // points de la case de départ de chaque joueur
   function startCells(n, np, h) {
     if (h && h !== n) return np === 2 ? [n + 1, (h - 2) * n + n - 2] : [];      // rectangle : deux départs symétriques (rotation de 180°)
     const t = LAYOUTS[np + '-' + n];
@@ -60,7 +61,7 @@
   function newBoard(n, np, rot, h) {
     np = np || 2; rot = rot || 0; h = h || n;
     const o = new Array(n * h).fill(-1), c = new Array(n * h).fill(0);
-    startCells(n, np, h).forEach((i, k) => { const p = ((k - rot) % np + np) % np; o[i] = p; c[i] = 1; });
+    startCells(n, np, h).forEach((i, k) => { const p = ((k - rot) % np + np) % np; o[i] = p; c[i] = START_POINTS; });
     const b = { n, o, c };
     if (h !== n) b.h = h;
     return b;
@@ -192,7 +193,7 @@
       lo, hi, progress: (elo - lo) / (hi - lo), toNext: hi - elo, nextName: top ? 'X' + (sub + 1) : RANK_NAMES[k + 1] };
   }
 
-  const api = { ELO_MIN, ELO_MAX_RANK, ELO_SCALE, RANK_TIERS, RANK_NAMES, RANK_FLOORS, rankOf, neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
+  const api = { START_POINTS, ELO_MIN, ELO_MAX_RANK, ELO_SCALE, RANK_TIERS, RANK_NAMES, RANK_FLOORS, rankOf, neighbors, ring, maxDead, SUDDEN_START, SUDDEN_EVERY, suddenLeft, LAYOUTS, SIZES, startCells, newBoard, simulate, step, nextTurn, tally, ranksFrom, eloDeltas };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Engine = api;
 })(typeof window !== 'undefined' ? window : this);
